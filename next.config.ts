@@ -5,12 +5,16 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        hostname: "cdn.sanity.io",
         protocol: "https",
+        hostname: "*.supabase.co",
       },
       {
-        hostname: "img.clerk.com",
         protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
       },
     ],
   },

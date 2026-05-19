@@ -2,56 +2,61 @@
 
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { Button } from "./ui/button";
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { completeLessonAction } from "@/app/actions/completeLessonAction";
-import { uncompleteLessonAction } from "@/app/actions/uncompleteLessonAction";
-import { getLessonCompletionStatusAction } from "@/app/actions/getLessonCompletionStatusAction";
+import { createClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 interface LessonCompleteButtonProps {
   lessonId: string;
-  clerkId: string;
+  userId: string;
 }
 
 export function LessonCompleteButton({
   lessonId,
-  clerkId,
+  userId,
 }: LessonCompleteButtonProps) {
   const [isPending, setIsPending] = useState(false);
   const [isCompleted, setIsCompleted] = useState<boolean | null>(null);
-  const [isPendingTransition, startTransition] = useTransition();
   const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    startTransition(async () => {
+    const fetchStatus = async () => {
       try {
-        const status = await getLessonCompletionStatusAction(lessonId, clerkId);
-        setIsCompleted(status);
+        const { data } = await supabase
+          .from('progress')
+          .select('is_completed')
+          .eq('lesson_id', lessonId)
+          .eq('user_id', userId)
+          .single();
+        
+        setIsCompleted(data?.is_completed || false);
       } catch (error) {
         console.error("Error checking lesson completion status:", error);
         setIsCompleted(false);
       }
-    });
-  }, [lessonId, clerkId]);
+    };
+    fetchStatus();
+  }, [lessonId, userId, supabase]);
 
   const handleToggle = async () => {
     try {
       setIsPending(true);
-      if (isCompleted) {
-        await uncompleteLessonAction(lessonId, clerkId);
-      } else {
-        await completeLessonAction(lessonId, clerkId);
-      }
+      const newStatus = !isCompleted;
 
-      startTransition(async () => {
-        const newStatus = await getLessonCompletionStatusAction(
-          lessonId,
-          clerkId
-        );
-        setIsCompleted(newStatus);
-      });
+      const { error } = await supabase
+        .from('progress')
+        .upsert({
+          lesson_id: lessonId,
+          user_id: userId,
+          is_completed: newStatus,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id, lesson_id' });
 
+      if (error) throw error;
+
+      setIsCompleted(newStatus);
       router.refresh();
     } catch (error) {
       console.error("Error toggling lesson completion:", error);
@@ -60,7 +65,7 @@ export function LessonCompleteButton({
     }
   };
 
-  const isLoading = isCompleted === null || isPendingTransition;
+  const isLoading = isCompleted === null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t z-50">
@@ -92,7 +97,7 @@ export function LessonCompleteButton({
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Updating...
+              Loading...
             </>
           ) : isPending ? (
             <>

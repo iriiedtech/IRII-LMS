@@ -1,4 +1,4 @@
-import getCourseById from "@/sanity/lib/courses/getCourseById";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 
 interface CoursePageProps {
@@ -9,17 +9,57 @@ interface CoursePageProps {
 
 export default async function CoursePage({ params }: CoursePageProps) {
   const { courseId } = await params;
-  const course = await getCourseById(courseId);
+  const supabase = await createClient();
+
+  // Check enrollment first
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return redirect("/login");
+
+  const { data: enrollment } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('course_id', courseId)
+    .single();
+
+  if (!enrollment) {
+    return redirect(`/courses/${courseId}`);
+  }
+
+  // Fetch course with ordered modules and lessons
+  const { data: course } = await supabase
+    .from('courses')
+    .select(`
+      id,
+      title,
+      modules (
+        id,
+        order_index,
+        lessons (
+          id,
+          order_index
+        )
+      )
+    `)
+    .eq('id', courseId)
+    .single();
 
   if (!course) {
     return redirect("/");
   }
 
   // Redirect to the first lesson of the first module if available
-  if (course.modules?.[0]?.lessons?.[0]?._id) {
-    return redirect(
-      `/dashboard/courses/${courseId}/lessons/${course.modules[0].lessons[0]._id}`
-    );
+  // Sort modules by order_index, then sort lessons within the first module
+  const sortedModules = course.modules?.sort((a: any, b: any) => a.order_index - b.order_index) || [];
+  if (sortedModules.length > 0) {
+    const firstModule = sortedModules[0];
+    const sortedLessons = firstModule.lessons?.sort((a: any, b: any) => a.order_index - b.order_index) || [];
+    
+    if (sortedLessons.length > 0) {
+      return redirect(
+        `/dashboard/courses/${courseId}/lessons/${sortedLessons[0].id}`
+      );
+    }
   }
 
   return (

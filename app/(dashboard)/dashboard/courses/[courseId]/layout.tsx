@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation";
-import { currentUser } from "@clerk/nextjs/server";
-import getCourseById from "@/sanity/lib/courses/getCourseById";
+import { createClient } from "@/lib/supabase-server";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { getCourseProgress } from "@/sanity/lib/lessons/getCourseProgress";
-import { checkCourseAccess } from "@/lib/auth";
 
 interface CourseLayoutProps {
   children: React.ReactNode;
@@ -16,30 +13,71 @@ export default async function CourseLayout({
   children,
   params,
 }: CourseLayoutProps) {
-  const user = await currentUser();
   const { courseId } = await params;
+  const supabase = await createClient();
 
-  if (!user?.id) {
-    return redirect("/");
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return redirect("/login");
   }
 
-  const authResult = await checkCourseAccess(user?.id || null, courseId);
-  if (!authResult.isAuthorized || !user?.id) {
-    return redirect(authResult.redirect!);
+  // Check enrollment
+  const { data: enrollment } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('course_id', courseId)
+    .single();
+
+  if (!enrollment) {
+    return redirect(`/courses/${courseId}`);
   }
 
-  const [course, progress] = await Promise.all([
-    getCourseById(courseId),
-    getCourseProgress(user.id, courseId),
-  ]);
+  // Fetch course data for sidebar
+  const { data: course } = await supabase
+    .from('courses')
+    .select(`
+      id,
+      title,
+      modules (
+        id,
+        title,
+        order_index,
+        lessons (
+          id,
+          title,
+          order_index
+        )
+      )
+    `)
+    .eq('id', courseId)
+    .single();
 
   if (!course) {
     return redirect("/my-courses");
   }
 
+  // Sort modules and lessons for sidebar
+  const sortedModules = course.modules?.sort((a: any, b: any) => a.order_index - b.order_index).map((module: any) => ({
+    ...module,
+    lessons: module.lessons?.sort((a: any, b: any) => a.order_index - b.order_index) || []
+  })) || [];
+
+  course.modules = sortedModules;
+
+  // Fetch progress
+  const { data: progress } = await supabase
+    .from('progress')
+    .select('lesson_id')
+    .eq('user_id', user.id)
+    .eq('is_completed', true);
+
+  const completedLessonIds = progress?.map(p => p.lesson_id) || [];
+
   return (
     <div className="h-full">
-      <Sidebar course={course} completedLessons={progress.completedLessons} />
+      <Sidebar course={course as any} completedLessons={completedLessonIds} />
       <main className="h-full lg:pt-[64px] pl-20 lg:pl-96">{children}</main>
     </div>
   );

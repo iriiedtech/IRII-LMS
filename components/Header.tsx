@@ -50,8 +50,8 @@ export default function Header() {
               className="flex items-center space-x-2 hover:opacity-90 transition-opacity"
             >
               <BookOpen className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold bg-gradient-to-r from-primary/90 to-primary bg-clip-text text-transparent">
-                LMS SaaS
+              <span className="text-xl font-bold text-foreground">
+                IRII
               </span>
             </Link>
 

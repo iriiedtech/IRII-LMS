@@ -1,31 +1,61 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getEnrolledCourses } from "@/sanity/lib/student/getEnrolledCourses";
+import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
-import { getCourseProgress } from "@/sanity/lib/lessons/getCourseProgress";
 import { CourseCard } from "@/components/CourseCard";
+import { calculateCourseProgress } from "@/lib/courseProgress";
 
 export default async function MyCoursesPage() {
-  const user = await currentUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user?.id) {
+  if (!user) {
     return redirect("/");
   }
 
-  const enrolledCourses = await getEnrolledCourses(user.id);
+  // Fetch enrolled courses with modules and lessons
+  const { data: enrollments } = await supabase
+    .from('enrollments')
+    .select(`
+      course_id,
+      courses (
+        id,
+        title,
+        description,
+        thumbnail_url,
+        price,
+        instructor:users!instructor_id (
+          full_name,
+          avatar_url
+        ),
+        modules (
+          id,
+          lessons (
+            id
+          )
+        )
+      )
+    `)
+    .eq('user_id', user.id);
 
-  // Get progress for each enrolled course
-  const coursesWithProgress = await Promise.all(
-    enrolledCourses.map(async ({ course }) => {
-      if (!course) return null;
-      const progress = await getCourseProgress(user.id, course._id);
-      return {
-        course,
-        progress: progress.courseProgress,
-      };
-    })
-  );
+  const enrolledCourses = enrollments?.map(e => e.courses).filter(Boolean) || [];
+
+  // Fetch progress for all completed lessons for this user
+  const { data: progressData } = await supabase
+    .from('progress')
+    .select('lesson_id')
+    .eq('user_id', user.id)
+    .eq('is_completed', true);
+
+  const completedLessonIds = progressData?.map(p => p.lesson_id) || [];
+
+  const coursesWithProgress = enrolledCourses.map((course: any) => {
+    const progress = calculateCourseProgress(course.modules, completedLessonIds);
+    return {
+      course,
+      progress
+    };
+  });
 
   return (
     <div className="h-full pt-16">
@@ -57,10 +87,10 @@ export default async function MyCoursesPage() {
 
               return (
                 <CourseCard
-                  key={item.course._id}
+                  key={item.course.id}
                   course={item.course}
                   progress={item.progress}
-                  href={`/dashboard/courses/${item.course._id}`}
+                  href={`/dashboard/courses/${item.course.id}`}
                 />
               );
             })}

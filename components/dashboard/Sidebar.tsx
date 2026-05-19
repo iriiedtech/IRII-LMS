@@ -18,11 +18,6 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
-import {
-  GetCourseByIdQueryResult,
-  GetCompletionsQueryResult,
-  Module,
-} from "@/sanity.types";
 import { useSidebar } from "@/components/providers/sidebar-provider";
 import { useEffect, useState } from "react";
 import {
@@ -35,9 +30,26 @@ import DarkModeToggle from "../DarkModeToggle";
 import { CourseProgress } from "@/components/CourseProgress";
 import { calculateCourseProgress } from "@/lib/courseProgress";
 
+interface Lesson {
+  id: string;
+  title: string;
+}
+
+interface Module {
+  id: string;
+  title: string;
+  lessons: Lesson[];
+}
+
+interface Course {
+  id: string;
+  title: string;
+  modules: Module[];
+}
+
 interface SidebarProps {
-  course: GetCourseByIdQueryResult;
-  completedLessons?: GetCompletionsQueryResult["completedLessons"];
+  course: Course;
+  completedLessons?: string[];
 }
 
 export function Sidebar({ course, completedLessons = [] }: SidebarProps) {
@@ -52,9 +64,9 @@ export function Sidebar({ course, completedLessons = [] }: SidebarProps) {
         module.lessons?.some(
           (lesson) =>
             pathname ===
-            `/dashboard/courses/${course._id}/lessons/${lesson._id}`
+            `/dashboard/courses/${course.id}/lessons/${lesson.id}`
         )
-      )?._id;
+      )?.id;
 
       if (currentModuleId && !openModules.includes(currentModuleId)) {
         setOpenModules((prev) => [...prev, currentModuleId]);
@@ -121,8 +133,8 @@ export function Sidebar({ course, completedLessons = [] }: SidebarProps) {
           >
             {course.modules?.map((module, moduleIndex) => (
               <AccordionItem
-                key={module._id}
-                value={module._id}
+                key={module.id}
+                value={module.id}
                 className={cn(
                   "border-none",
                   moduleIndex % 2 === 0 ? "bg-muted/30" : "bg-background"
@@ -148,16 +160,14 @@ export function Sidebar({ course, completedLessons = [] }: SidebarProps) {
                     {module.lessons?.map((lesson, lessonIndex) => {
                       const isActive =
                         pathname ===
-                        `/dashboard/courses/${course._id}/lessons/${lesson._id}`;
-                      const isCompleted = completedLessons.some(
-                        (completion) => completion.lesson?._id === lesson._id
-                      );
+                        `/dashboard/courses/${course.id}/lessons/${lesson.id}`;
+                      const isCompleted = completedLessons.includes(lesson.id);
 
                       return (
                         <Link
-                          key={lesson._id}
+                          key={lesson.id}
                           prefetch={false}
-                          href={`/dashboard/courses/${course._id}/lessons/${lesson._id}`}
+                          href={`/dashboard/courses/${course.id}/lessons/${lesson.id}`}
                           onClick={close}
                           className={cn(
                             "flex items-center pl-8 lg:pl-10 pr-2 lg:pr-4 py-2 gap-x-2 lg:gap-x-4 group hover:bg-muted/50 transition-colors relative",
