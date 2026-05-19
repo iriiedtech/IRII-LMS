@@ -12,7 +12,7 @@ export function Footer() {
               <span className="text-xl font-bold text-white">IRII</span>
             </Link>
             <p className="text-secondary-foreground/80 max-w-sm mb-6 leading-relaxed">
-              <strong>Mission:</strong> To provide 100% industry-ready practical training and transform engineering students into highly skilled professionals. We are India's leading nationwide internship ecosystem eliminating the academia-industry gap.
+              <strong>Mission:</strong> To provide 100% industry-ready practical training and transform engineering students into highly skilled professionals. We are India&apos;s leading nationwide internship ecosystem eliminating the academia-industry gap.
             </p>
           </div>
           

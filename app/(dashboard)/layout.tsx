@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider } from "@/components/providers/sidebar-provider";
+import { StudentLayoutWrapper } from "@/components/dashboard/StudentLayoutWrapper";
 
 export const metadata: Metadata = {
-  title: "Dashboard | LMS SaaS",
-  description: "Your learning dashboard",
+  title: "Dashboard | IRII Finishing School",
+  description: "Your structural engineering learning dashboard",
 };
 
 export default function DashboardLayout({
@@ -20,7 +21,7 @@ export default function DashboardLayout({
       disableTransitionOnChange
     >
       <SidebarProvider>
-        <div className="h-full">{children}</div>
+        <StudentLayoutWrapper>{children}</StudentLayoutWrapper>
       </SidebarProvider>
     </ThemeProvider>
   );

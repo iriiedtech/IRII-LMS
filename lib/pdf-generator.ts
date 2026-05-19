@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 export async function generateCertificate(studentName: string, courseName: string, date: string) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([600, 400]);
-  const { width, height } = page.getSize();
+  const { height } = page.getSize();
 
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 

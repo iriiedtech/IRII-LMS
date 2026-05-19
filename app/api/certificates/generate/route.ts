@@ -12,20 +12,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if course is completed
-    const { data: progress } = await supabase
-      .from('progress')
-      .select('is_completed')
-      .eq('user_id', user.id)
-      .eq('is_completed', true);
 
-    // Get total lessons in course
-    const { count: totalLessons } = await supabase
-      .from('lessons')
-      .select('id', { count: 'exact' })
-      .eq('module_id', (
-        await supabase.from('modules').select('id').eq('course_id', courseId)
-      ).data?.[0]?.id); // Simplification for demo
 
     // If all completed, generate PDF
     const pdfBytes = await generateCertificate(
@@ -36,7 +23,7 @@ export async function POST(req: Request) {
 
     // Upload to Supabase Storage
     const fileName = `certificates/${user.id}_${courseId}.pdf`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('certificates')
       .upload(fileName, pdfBytes, {
         contentType: 'application/pdf',

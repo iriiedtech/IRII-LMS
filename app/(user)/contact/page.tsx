@@ -6,7 +6,7 @@ export default function ContactPage() {
       <h1 className="text-4xl font-bold mb-8 text-center">Contact Us</h1>
       <div className="bg-card p-8 rounded-2xl border shadow-sm text-center">
         <p className="text-lg text-muted-foreground mb-8">
-          Have questions about our programs, the Shared Success Plan, or corporate partnerships? We'd love to hear from you.
+          Have questions about our programs, the Shared Success Plan, or corporate partnerships? We&apos;d love to hear from you.
         </p>
         <a 
           href="mailto:contact@irii.in" 

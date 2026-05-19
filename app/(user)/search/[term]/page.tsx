@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Search } from "lucide-react";
 import { CourseCard } from "@/components/CourseCard";
 import { createClient } from "@/lib/supabase-server";

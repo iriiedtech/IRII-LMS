@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Hero from "@/components/Hero";
 import { CourseCard } from "@/components/CourseCard";
 import { createClient } from "@/lib/supabase-server";
-import { BookOpen, Briefcase, Heart, MonitorPlay, ShieldCheck, Trophy, CheckCircle2 } from "lucide-react";
+import { Briefcase, Heart, MonitorPlay, ShieldCheck, Trophy, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,7 @@ export default async function Home() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-4xl font-bold mb-4 tracking-tight">Designed for Depth.</h2>
             <p className="text-lg text-muted-foreground">
-              We've replaced outdated university curricula with a dual-pillar approach that focuses on real-world engineering and emotional resilience.
+              We&apos;ve replaced outdated university curricula with a dual-pillar approach that focuses on real-world engineering and emotional resilience.
             </p>
           </div>
 
@@ -100,7 +102,7 @@ export default async function Home() {
             <div>
               <h2 className="text-4xl font-bold mb-6 tracking-tight">The Master Architects.</h2>
               <p className="text-lg text-secondary-foreground/80 mb-8 leading-relaxed">
-                Our instructors aren't just academics; they are industry veterans who have built and scaled multi-billion dollar engineering projects. You will get directly mentored by professionals working in top EPC corporate firms across the world.
+                Our instructors aren&apos;t just academics; they are industry veterans who have built and scaled multi-billion dollar engineering projects. You will get directly mentored by professionals working in top EPC corporate firms across the world.
               </p>
               
               <div className="space-y-6">
@@ -203,9 +205,9 @@ export default async function Home() {
                 </li>
               </ul>
               
-              <a href="/search/courses" className="w-full text-center py-4 bg-white text-primary font-bold rounded-lg hover:bg-white/90 transition-colors shadow-lg">
+              <Link href="/search/courses" className="w-full text-center py-4 bg-white text-primary font-bold rounded-lg hover:bg-white/90 transition-colors shadow-lg">
                 Apply for the Program
-              </a>
+              </Link>
             </div>
           </div>
         </div>

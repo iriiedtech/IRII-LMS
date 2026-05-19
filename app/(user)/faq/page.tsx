@@ -28,7 +28,7 @@ export default function FAQPage() {
         <div>
           <h3 className="text-xl font-bold mb-2">What makes IRII different from other courses?</h3>
           <p className="text-muted-foreground">
-            We use a "Dual-Pillar" approach. While competitors only teach software commands, we integrate Art of Living (Sudarshan Kriya) sessions to build emotional resilience. Additionally, our curriculum is mentored by industry veterans, and we provide direct corporate placements.
+            We use a &quot;Dual-Pillar&quot; approach. While competitors only teach software commands, we integrate Art of Living (Sudarshan Kriya) sessions to build emotional resilience. Additionally, our curriculum is mentored by industry veterans, and we provide direct corporate placements.
           </p>
         </div>
       </div>
