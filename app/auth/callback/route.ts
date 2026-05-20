@@ -13,12 +13,19 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
+        const email = user.email!.toLowerCase();
+        const isAdmin = email.startsWith("admin@") || 
+                        email.endsWith("@irii.in") || 
+                        email === "rishisingh1034@gmail.com";
+        const role = isAdmin ? "admin" : "student";
+
         // Create or update user profile in public.users table
         await supabase.from('users').upsert({
           id: user.id,
           email: user.email!,
           full_name: user.user_metadata.full_name || user.user_metadata.name || 'User',
           avatar_url: user.user_metadata.avatar_url || user.user_metadata.picture || '',
+          role: role,
         }, { onConflict: 'id' })
       }
 

@@ -141,4 +141,93 @@ CREATE POLICY "Public can view published courses" ON courses
 CREATE POLICY "Admins can manage everything" ON courses
   FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
 
--- Similar policies for other tables...
+-- Users can update their own data
+CREATE POLICY "Users can update their own data" ON users
+  FOR UPDATE USING (auth.uid() = id);
+
+-- Modules Policies
+CREATE POLICY "Anyone can view modules" ON modules
+  FOR SELECT USING (TRUE);
+CREATE POLICY "Admins can manage modules" ON modules
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Lessons Policies
+CREATE POLICY "Anyone can view lessons" ON lessons
+  FOR SELECT USING (TRUE);
+CREATE POLICY "Admins can manage lessons" ON lessons
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Enrollments Policies
+CREATE POLICY "Users can view their own enrollments" ON enrollments
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Admins can manage enrollments" ON enrollments
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Progress Policies
+CREATE POLICY "Users can view their own progress" ON progress
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert their own progress" ON progress
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update their own progress" ON progress
+  FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Admins can manage progress" ON progress
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Orders Policies
+CREATE POLICY "Users can view their own orders" ON orders
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Admins can manage orders" ON orders
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Certificates Policies
+CREATE POLICY "Users can view their own certificates" ON certificates
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Admins can manage certificates" ON certificates
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Feed Posts Policies
+CREATE POLICY "Anyone can view feed posts" ON feed_posts
+  FOR SELECT USING (TRUE);
+CREATE POLICY "Admins can manage feed posts" ON feed_posts
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Jobs Policies
+CREATE POLICY "Anyone can view jobs" ON jobs
+  FOR SELECT USING (TRUE);
+CREATE POLICY "Admins can manage jobs" ON jobs
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Coupons Policies
+CREATE POLICY "Anyone can view coupons" ON coupons
+  FOR SELECT USING (TRUE);
+CREATE POLICY "Admins can manage coupons" ON coupons
+  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+
+-- Trigger to automatically copy new auth users to public.users table
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name, avatar_url, role)
+  VALUES (
+    new.id,
+    new.email,
+    COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'User'),
+    COALESCE(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture', ''),
+    CASE 
+      WHEN new.email = 'rishisingh1034@gmail.com' 
+           OR new.email LIKE 'admin@%' 
+           OR new.email LIKE '%@irii.in' THEN 'admin'
+      ELSE 'student'
+    END
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger the function every time a user is created in auth
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
