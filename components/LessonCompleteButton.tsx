@@ -10,11 +10,13 @@ import { cn } from "@/lib/utils";
 interface LessonCompleteButtonProps {
   lessonId: string;
   userId: string;
+  courseId: string;
 }
 
 export function LessonCompleteButton({
   lessonId,
   userId,
+  courseId,
 }: LessonCompleteButtonProps) {
   const [isPending, setIsPending] = useState(false);
   const [isCompleted, setIsCompleted] = useState<boolean | null>(null);
@@ -40,6 +42,74 @@ export function LessonCompleteButton({
     fetchStatus();
   }, [lessonId, userId, supabase]);
 
+  const checkAndGenerateCertificate = async () => {
+    try {
+      // 1. Get all module IDs for this course
+      const { data: modules } = await supabase
+        .from('modules')
+        .select('id')
+        .eq('course_id', courseId);
+      
+      const moduleIds = (modules as { id: string }[] | null)?.map((m) => m.id) || [];
+      if (moduleIds.length === 0) return;
+
+      // 2. Get all lesson IDs for these modules
+      const { data: lessons } = await supabase
+        .from('lessons')
+        .select('id')
+        .in('module_id', moduleIds);
+      
+      const lessonIds = (lessons as { id: string }[] | null)?.map((l) => l.id) || [];
+      if (lessonIds.length === 0) return;
+
+      // 3. Get completed lessons for this user
+      const { data: completedProgress } = await supabase
+        .from('progress')
+        .select('lesson_id')
+        .eq('user_id', userId)
+        .eq('is_completed', true)
+        .in('lesson_id', lessonIds);
+      
+      const completedLessonIds = (completedProgress as { lesson_id: string }[] | null)?.map((p) => p.lesson_id) || [];
+
+      // 4. Check if all lessons are completed
+      const isCourseCompleted = lessonIds.every((id: string) => completedLessonIds.includes(id));
+
+      if (isCourseCompleted) {
+        // 5. Check if certificate already exists
+        const { data: existingCert } = await supabase
+          .from('certificates')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('course_id', courseId)
+          .maybeSingle();
+
+        if (!existingCert) {
+          // 6. Get course details
+          const { data: courseData } = await supabase
+            .from('courses')
+            .select('title')
+            .eq('id', courseId)
+            .single();
+
+          // 7. Call certificate generation endpoint
+          await fetch('/api/certificates/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              courseId,
+              courseName: courseData?.title || 'Course Completion',
+            }),
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error auto-generating certificate:", err);
+    }
+  };
+
   const handleToggle = async () => {
     try {
       setIsPending(true);
@@ -57,6 +127,12 @@ export function LessonCompleteButton({
       if (error) throw error;
 
       setIsCompleted(newStatus);
+
+      if (newStatus) {
+        // Run course completion check asynchronously
+        await checkAndGenerateCertificate();
+      }
+
       router.refresh();
     } catch (error) {
       console.error("Error toggling lesson completion:", error);

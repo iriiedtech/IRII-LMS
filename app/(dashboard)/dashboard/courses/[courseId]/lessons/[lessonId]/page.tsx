@@ -72,7 +72,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
             )}
 
             <div className="flex justify-end">
-              <LessonCompleteButton lessonId={lesson.id} userId={user.id} />
+              <LessonCompleteButton lessonId={lesson.id} userId={user.id} courseId={courseId} />
             </div>
           </div>
         </div>

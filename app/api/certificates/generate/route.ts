@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createClient, createAdminClient } from '@/lib/supabase-server';
 import { generateCertificate } from '@/lib/pdf-generator';
 
 export async function POST(req: Request) {
@@ -12,18 +12,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const adminSupabase = createAdminClient();
 
+    // Ensure storage bucket exists
+    const { data: buckets } = await adminSupabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === 'certificates');
+    if (!bucketExists) {
+      await adminSupabase.storage.createBucket('certificates', {
+        public: true,
+      });
+    }
 
     // If all completed, generate PDF
     const pdfBytes = await generateCertificate(
-      user.user_metadata.full_name || user.email,
+      user.user_metadata?.full_name || user.email || 'Student',
       courseName,
       new Date().toLocaleDateString()
     );
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage using admin client to bypass storage RLS
     const fileName = `certificates/${user.id}_${courseId}.pdf`;
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await adminSupabase.storage
       .from('certificates')
       .upload(fileName, pdfBytes, {
         contentType: 'application/pdf',
@@ -32,16 +41,18 @@ export async function POST(req: Request) {
 
     if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = adminSupabase.storage
       .from('certificates')
       .getPublicUrl(fileName);
 
-    // Save to certificates table
-    await supabase.from('certificates').insert({
+    // Save to certificates table using admin client to bypass DB RLS
+    const { error: insertError } = await adminSupabase.from('certificates').insert({
       user_id: user.id,
       course_id: courseId,
       pdf_url: publicUrl,
     });
+
+    if (insertError) throw insertError;
 
     return NextResponse.json({ url: publicUrl });
   } catch (error) {

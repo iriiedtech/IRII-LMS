@@ -6,11 +6,11 @@ import {
   LayoutDashboard, 
   BookOpen, 
   Award, 
-  Mail, 
   Settings, 
   LogOut,
   GraduationCap,
-  Sparkles
+  Sparkles,
+  Newspaper
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -19,7 +19,8 @@ const studentMenuItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "My Courses", href: "/dashboard/courses", icon: BookOpen },
   { name: "Certificates", href: "/dashboard/certificates", icon: Award },
-  { name: "Messages", href: "/dashboard/messages", icon: Mail },
+  // { name: "Messages", href: "/dashboard/messages", icon: Mail },
+  { name: "Student Feed", href: "/dashboard/feed", icon: Newspaper },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
