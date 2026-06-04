@@ -231,3 +231,26 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+
+-- Lesson Comments Table
+CREATE TABLE IF NOT EXISTS lesson_comments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  lesson_id UUID REFERENCES lessons(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE lesson_comments ENABLE ROW LEVEL SECURITY;
+
+-- Lesson Comments Policies
+CREATE POLICY "Anyone can view lesson comments" ON lesson_comments
+  FOR SELECT USING (TRUE);
+
+CREATE POLICY "Authenticated users can insert their own comments" ON lesson_comments
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update/delete their own comments" ON lesson_comments
+  FOR ALL USING (auth.uid() = user_id);
+

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase-server";
 import { getGumletSignedUrl } from "@/lib/gumlet";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { LessonCompleteButton } from "@/components/LessonCompleteButton";
+import { getVdoCipherOtp } from "@/lib/vdocipher";
+import { LessonComments } from "@/components/LessonComments";
 
 interface LessonPageProps {
   params: Promise<{
@@ -42,8 +44,20 @@ export default async function LessonPage({ params }: LessonPageProps) {
     }
   }
 
-  // Generate signed URL if it's a Gumlet video
-  const secureVideoUrl = lesson.video_url ? getGumletSignedUrl(lesson.video_url) : null;
+  // Get VdoCipher OTP & PlaybackInfo or fall back to Gumlet
+  let vdoOtp = "";
+  let vdoPlaybackInfo = "";
+  let secureVideoUrl = null;
+
+  if (lesson.video_url) {
+    const vdoData = await getVdoCipherOtp(lesson.video_url, user.email || "student@irii.in");
+    if (vdoData) {
+      vdoOtp = vdoData.otp;
+      vdoPlaybackInfo = vdoData.playbackInfo;
+    } else {
+      secureVideoUrl = getGumletSignedUrl(lesson.video_url);
+    }
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -53,10 +67,12 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
           <div className="space-y-8">
             {/* Video Section */}
-            {secureVideoUrl && (
+            {(vdoOtp || secureVideoUrl) && (
               <VideoPlayer 
-                url={secureVideoUrl} 
-                userEmail={user.email} // Pass email for dynamic DRM watermark
+                url={secureVideoUrl || undefined} 
+                userEmail={user.email} 
+                vdoOtp={vdoOtp || undefined}
+                vdoPlaybackInfo={vdoPlaybackInfo || undefined}
               />
             )}
 
@@ -71,9 +87,16 @@ export default async function LessonPage({ params }: LessonPageProps) {
               </div>
             )}
 
-            <div className="flex justify-end">
+            <div className="flex justify-end border-b border-border/60 pb-8">
               <LessonCompleteButton lessonId={lesson.id} userId={user.id} courseId={courseId} />
             </div>
+
+            {/* Comments Section */}
+            <LessonComments
+              lessonId={lesson.id}
+              currentUserId={user.id}
+              currentUserName={user.user_metadata?.full_name || user.email || "Student"}
+            />
           </div>
         </div>
       </div>

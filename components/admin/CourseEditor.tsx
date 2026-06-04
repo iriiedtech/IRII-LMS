@@ -450,15 +450,15 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-muted-foreground mb-1 uppercase">Gumlet Video URL (Secure CDN)</label>
+                <label className="block text-[10px] font-bold text-muted-foreground mb-1 uppercase">VdoCipher Video ID or URL (Secure DRM)</label>
                 <input
-                  type="url"
-                  placeholder="e.g. https://video.gumlet.com/..."
+                  type="text"
+                  placeholder="e.g. 32-character video ID or embed URL"
                   value={lessonVideoUrl}
                   onChange={(e) => setLessonVideoUrl(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none"
                 />
-                <span className="text-[10px] text-muted-foreground">Used for DRM secure streaming (configured with watermarks).</span>
+                <span className="text-[10px] text-muted-foreground">Used for encrypted DRM secure streaming with dynamic watermarks.</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
