@@ -20,6 +20,7 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
   const [price, setPrice] = useState(course.price ? String(course.price) : "");
   const [isPublished, setIsPublished] = useState(course.is_published || false);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Curriculum State
   const [modules, setModules] = useState<any[]>(initialModules || []);
@@ -68,6 +69,45 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
     } else {
       alert("Course details updated successfully!");
       router.refresh();
+    }
+  };
+
+  const handleDeleteCourse = async () => {
+    if (!confirm("Are you sure you want to delete this course? This will permanently delete the course, all its modules, lessons, student progress, enrollments, and generated certificates. This action cannot be undone.")) {
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      // 1. Delete associated certificates
+      await supabase
+        .from("certificates")
+        .delete()
+        .eq("course_id", course.id);
+
+      // 2. Nullify course_id in orders to satisfy foreign key constraint without losing financial records
+      await supabase
+        .from("orders")
+        .update({ course_id: null })
+        .eq("course_id", course.id);
+
+      // 3. Delete the course (will cascade delete modules, lessons, enrollments, progress)
+      const { error } = await supabase
+        .from("courses")
+        .delete()
+        .eq("id", course.id);
+
+      if (error) {
+        throw error;
+      }
+
+      alert("Course deleted successfully.");
+      window.location.href = "/admin/courses";
+    } catch (err: any) {
+      alert(err.message || "An error occurred while deleting the course.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -288,6 +328,22 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
                 {loading ? "Saving..." : "Save Details"}
               </button>
             </form>
+
+            <div className="border-t border-destructive/20 pt-6 mt-6">
+              <h4 className="text-xs font-bold text-destructive uppercase mb-2">Danger Zone</h4>
+              <p className="text-[10px] text-muted-foreground mb-3 leading-normal">
+                Deleting this course will permanently remove all associated modules, lessons, student progress, and enrollments.
+              </p>
+              <button
+                type="button"
+                onClick={handleDeleteCourse}
+                disabled={deleting}
+                className="w-full flex items-center justify-center gap-2 py-2 bg-destructive/10 text-destructive border border-destructive/20 font-semibold rounded-lg text-sm hover:bg-destructive hover:text-white transition-all shadow-sm disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? "Deleting..." : "Delete Course"}
+              </button>
+            </div>
           </div>
         </div>
 
