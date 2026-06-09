@@ -53,11 +53,11 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-muted-foreground">+91 98765 43210</span>
+                <span className="text-muted-foreground">+91-9691507331</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-muted-foreground">Bengaluru, Karnataka, India</span>
+                <span className="text-muted-foreground">Rajnandgaon, Chhattisgarh, India</span>
               </div>
             </div>
           </div>
@@ -68,7 +68,7 @@ export function Footer() {
           <p>© {new Date().getFullYear()} IRII Finishing School. All rights reserved.</p>
           <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+            <Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link>
           </div>
         </div>
       </div>
