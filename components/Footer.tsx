@@ -1,46 +1,72 @@
 import Link from "next/link";
-import { BookOpen, Mail } from "lucide-react";
+import { GraduationCap, Mail, Phone, MapPin } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="bg-secondary text-secondary-foreground py-12 border-t border-border">
-      <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-4 gap-8">
-          <div className="md:col-span-2">
-            <Link href="/" className="flex items-center space-x-2 mb-4">
-              <BookOpen className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold text-white">IRII</span>
+    <footer className="bg-card text-foreground py-16 border-t border-border/80 relative overflow-hidden">
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+      
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+          {/* Brand Info */}
+          <div className="md:col-span-2 space-y-6">
+            <Link href="/" className="flex items-center space-x-2">
+              <GraduationCap className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold tracking-tight text-foreground">IRII</span>
             </Link>
-            <p className="text-secondary-foreground/80 max-w-sm mb-6 leading-relaxed">
-              <strong>Mission:</strong> To provide 100% industry-ready practical training and transform engineering students into highly skilled professionals. We are India&apos;s leading nationwide internship ecosystem eliminating the academia-industry gap.
+            <p className="text-muted-foreground text-xs md:text-sm leading-relaxed max-w-sm">
+              IRII is India&apos;s leading engineering finishing school and practical internship ecosystem. We bridge the massive academia-industry gap by transforming graduates into fully industry-ready structural engineering experts.
             </p>
           </div>
           
+          {/* Navigation links */}
           <div>
-            <h4 className="font-bold mb-4 text-white">Platform</h4>
-            <ul className="space-y-2 text-secondary-foreground/80">
-              <li><Link href="/search/courses" className="hover:text-primary transition-colors">Courses</Link></li>
-              <li><Link href="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
-              <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-bold mb-4 text-white">Support</h4>
-            <ul className="space-y-2 text-secondary-foreground/80">
-              <li><Link href="/faq" className="hover:text-primary transition-colors">FAQ</Link></li>
-              <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
-              <li className="flex items-center gap-2 mt-4">
-                <Mail className="h-4 w-4 text-primary" />
-                <a href="mailto:contact@irii.in" className="hover:text-primary transition-colors">contact@irii.in</a>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-4">Platform</h4>
+            <ul className="space-y-3 text-xs md:text-sm text-muted-foreground">
+              <li>
+                <Link href="/search/courses" className="hover:text-primary transition-colors font-medium">Courses</Link>
+              </li>
+              <li>
+                <Link href="/pricing" className="hover:text-primary transition-colors font-medium">Pricing</Link>
+              </li>
+              <li>
+                <Link href="/about" className="hover:text-primary transition-colors font-medium">About Us</Link>
               </li>
             </ul>
           </div>
+          
+          {/* Help & Support info */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-4">Support</h4>
+            <ul className="space-y-3 text-xs md:text-sm text-muted-foreground">
+              <li>
+                <Link href="/faq" className="hover:text-primary transition-colors font-medium">FAQ</Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-primary transition-colors font-medium">Contact Us</Link>
+              </li>
+            </ul>
+            <div className="space-y-2 pt-2 text-xs md:text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-primary shrink-0" />
+                <a href="mailto:contact@irii.in" className="hover:text-primary transition-colors">contact@irii.in</a>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-muted-foreground">+91 98765 43210</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-muted-foreground">Bengaluru, Karnataka, India</span>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div className="border-t border-secondary-foreground/10 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between text-sm text-secondary-foreground/60">
-          <p>© {new Date().getFullYear()} IRII. All rights reserved.</p>
-          <div className="flex gap-4 mt-4 md:mt-0">
+        {/* Footer bottom bar */}
+        <div className="border-t border-border/60 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between text-[11px] font-semibold text-muted-foreground gap-4">
+          <p>© {new Date().getFullYear()} IRII Finishing School. All rights reserved.</p>
+          <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
           </div>

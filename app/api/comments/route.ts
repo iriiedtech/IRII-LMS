@@ -18,6 +18,7 @@ export async function GET(req: Request) {
         lesson_id,
         user_id,
         content,
+        parent_id,
         created_at,
         users (
           full_name,
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
       lesson_id: comment.lesson_id,
       user_id: comment.user_id,
       content: comment.content,
+      parent_id: comment.parent_id || null,
       created_at: comment.created_at,
       user_name: comment.users?.full_name || comment.users?.email || "Student"
     }));
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { lessonId, content } = await req.json();
+    const { lessonId, content, parentId } = await req.json();
     if (!lessonId || !content) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
@@ -66,7 +68,8 @@ export async function POST(req: Request) {
       .insert({
         lesson_id: lessonId,
         user_id: user.id,
-        content
+        content,
+        parent_id: parentId || null
       })
       .select()
       .single();

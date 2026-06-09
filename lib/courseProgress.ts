@@ -18,10 +18,21 @@ export function calculateCourseProgress(
   modules: Module[] | null,
   completedLessonIds: string[]
 ): number {
+  if (!modules) return 0;
   const totalLessons = calculateTotalLessons(modules);
-  const totalCompleted = completedLessonIds.length;
+  if (totalLessons === 0) return 0;
 
-  return Math.round(
-    totalLessons > 0 ? (totalCompleted / totalLessons) * 100 : 0
+  const courseLessonIds = new Set<string>();
+  modules.forEach(mod => {
+    mod.lessons?.forEach(les => {
+      courseLessonIds.add(les.id);
+    });
+  });
+
+  const totalCompleted = completedLessonIds.filter(id => courseLessonIds.has(id)).length;
+
+  return Math.min(
+    100,
+    Math.round((totalCompleted / totalLessons) * 100)
   );
 }

@@ -238,6 +238,7 @@ CREATE TABLE IF NOT EXISTS lesson_comments (
   lesson_id UUID REFERENCES lessons(id) ON DELETE CASCADE,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
+  parent_id UUID REFERENCES lesson_comments(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
