@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createClient } from "@/lib/supabase-server";
+import { createAdminClient } from "@/lib/supabase-server";
 import AdminDashboardClient from "@/components/admin/AdminDashboardClient";
 
-export default async function AdminDashboard() {
-  const supabase = await createClient();
+export const dynamic = "force-dynamic";
 
-  // Fetch real data from the database in parallel
+export default async function AdminDashboard() {
+  const supabase = createAdminClient();
+
+  // Fetch real data from the database in parallel using Admin Client to bypass RLS
   const [
     usersRes,
     enrollmentsRes,

@@ -9,7 +9,6 @@ import {
   CornerDownRight, 
   CheckCircle2, 
   HelpCircle,
-  AlertCircle,
   ExternalLink,
   MessageSquareDashed
 } from "lucide-react";
@@ -234,14 +233,6 @@ export default function AdminDoubtsPage() {
         </div>
       </div>
 
-      {usingFallback && (
-        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-2xl p-4 text-xs flex gap-3 items-start">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold">Offline Fallback Mode:</span> Displaying user discussions stored in local storage cache. Make sure database tables are migrated via SQL settings to synchronize live doubts.
-          </div>
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

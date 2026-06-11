@@ -1,10 +1,12 @@
-import { createClient } from "@/lib/supabase-server";
+import { createAdminClient } from "@/lib/supabase-server";
 import { TrendingUp, Users, LineChart, PieChart, ShoppingBag } from "lucide-react";
 
-export default async function AdminAnalytics() {
-  const supabase = await createClient();
+export const dynamic = "force-dynamic";
 
-  // Fetch modules, lessons, enrollments, progress, orders, and students in parallel
+export default async function AdminAnalytics() {
+  const supabase = createAdminClient();
+
+  // Fetch modules, lessons, enrollments, progress, orders, and students in parallel using Admin Client to bypass RLS
   const [
     modulesRes,
     lessonsRes,
@@ -62,7 +64,7 @@ export default async function AdminAnalytics() {
   // B. Retention Rate: Active students (completed >= 1 lesson) / Total Enrolled students
   const uniqueStudentsWithProgress = new Set(progress?.map(p => p.user_id) || []);
   const activeLearnersCount = uniqueStudentsWithProgress.size;
-  const retentionRate = totalStudents > 0 ? (activeLearnersCount / totalStudents) * 100 : 91.2;
+  const retentionRate = totalStudents > 0 ? (activeLearnersCount / totalStudents) * 100 : 0.0;
 
   // C. Refund Rate: refunded orders / total orders
   const totalOrdersCount = orders?.length || 0;

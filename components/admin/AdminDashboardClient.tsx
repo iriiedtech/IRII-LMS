@@ -32,11 +32,17 @@ export default function AdminDashboardClient({
 
   // Parse dates correctly
   const parsedOrders = useMemo(() => {
-    return initialOrders.map(order => ({
-      ...order,
-      createdAtDate: new Date(order.created_at),
-      amountNum: Number(order.amount) || 0,
-    }));
+    return initialOrders.map(order => {
+      const userObj = Array.isArray(order.users) ? order.users[0] : order.users;
+      const courseObj = Array.isArray(order.courses) ? order.courses[0] : order.courses;
+      return {
+        ...order,
+        usersNormalized: userObj,
+        coursesNormalized: courseObj,
+        createdAtDate: new Date(order.created_at),
+        amountNum: Number(order.amount) || 0,
+      };
+    });
   }, [initialOrders]);
 
   const parsedEnrollments = useMemo(() => {
@@ -424,10 +430,10 @@ export default function AdminDashboardClient({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-foreground truncate">
-                        {order.users?.full_name || order.users?.email || "Unknown User"}
+                        {order.usersNormalized?.full_name || order.usersNormalized?.email || "Unknown User"}
                       </p>
                       <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                        {order.courses?.title || "Unknown Program"}
+                        {order.coursesNormalized?.title || "Unknown Program"}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
