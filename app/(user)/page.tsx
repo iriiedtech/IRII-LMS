@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import { CourseCard } from "@/components/CourseCard";
 import { createClient } from "@/lib/supabase-server";
 import { FAQSection } from "@/components/FAQSection";
+import { generateSlug } from "@/lib/slug";
 import {
   ShieldCheck,
   Trophy,
@@ -227,7 +228,7 @@ export default async function Home() {
                 <CourseCard
                   key={course.id}
                   course={course}
-                  href={`/courses/${course.id}`}
+                  href={`/courses/${generateSlug(course.title)}`}
                 />
               ))
             ) : (

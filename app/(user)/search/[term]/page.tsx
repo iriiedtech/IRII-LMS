@@ -2,6 +2,7 @@
 import { Search } from "lucide-react";
 import { CourseCard } from "@/components/CourseCard";
 import { createClient } from "@/lib/supabase-server";
+import { generateSlug } from "@/lib/slug";
 
 interface SearchPageProps {
   params: Promise<{
@@ -62,7 +63,7 @@ export default async function SearchPage({ params }: SearchPageProps) {
               <CourseCard
                 key={course.id}
                 course={course}
-                href={`/courses/${course.id}`}
+                href={`/courses/${generateSlug(course.title)}`}
               />
             ))}
           </div>
