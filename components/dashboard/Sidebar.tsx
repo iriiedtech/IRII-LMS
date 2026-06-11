@@ -166,7 +166,6 @@ export function Sidebar({ course, completedLessons = [] }: SidebarProps) {
                       return (
                         <Link
                           key={lesson.id}
-                          prefetch={false}
                           href={`/dashboard/courses/${course.id}/lessons/${lesson.id}`}
                           onClick={close}
                           className={cn(
@@ -222,7 +221,7 @@ export function Sidebar({ course, completedLessons = [] }: SidebarProps) {
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link href="/" prefetch={false}>
+              <Link href="/">
                 <Button variant="ghost" size="icon" className="h-10 w-10">
                   <Library className="h-5 w-5" />
                 </Button>

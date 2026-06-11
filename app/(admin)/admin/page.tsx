@@ -5,18 +5,17 @@ import AdminDashboardClient from "@/components/admin/AdminDashboardClient";
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  // Fetch real data from the database
-  const { data: users } = await supabase
-    .from("users")
-    .select("id, full_name, email, role, created_at");
-
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select("id, user_id, course_id, enrolled_at");
-
-  const { data: orders } = await supabase
-    .from("orders")
-    .select(`
+  // Fetch real data from the database in parallel
+  const [
+    usersRes,
+    enrollmentsRes,
+    ordersRes,
+    lessonsRes,
+    progressRes
+  ] = await Promise.all([
+    supabase.from("users").select("id, full_name, email, role, created_at"),
+    supabase.from("enrollments").select("id, user_id, course_id, enrolled_at"),
+    supabase.from("orders").select(`
       id,
       user_id,
       course_id,
@@ -30,17 +29,16 @@ export default async function AdminDashboard() {
       courses (
         title
       )
-    `)
-    .order("created_at", { ascending: false });
+    `).order("created_at", { ascending: false }),
+    supabase.from("lessons").select("*", { count: "exact", head: true }),
+    supabase.from("progress").select("*", { count: "exact", head: true }).eq("is_completed", true)
+  ]);
 
-  const { count: lessonsCount } = await supabase
-    .from("lessons")
-    .select("*", { count: "exact", head: true });
-
-  const { count: completedProgressCount } = await supabase
-    .from("progress")
-    .select("*", { count: "exact", head: true })
-    .eq("is_completed", true);
+  const users = usersRes.data;
+  const enrollments = enrollmentsRes.data;
+  const orders = ordersRes.data;
+  const lessonsCount = lessonsRes.count;
+  const completedProgressCount = progressRes.count;
 
   return (
     <AdminDashboardClient

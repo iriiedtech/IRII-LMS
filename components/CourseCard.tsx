@@ -28,7 +28,6 @@ export function CourseCard({ course, progress, href }: CourseCardProps) {
   return (
     <Link
       href={href}
-      prefetch={false}
       className="group hover:no-underline flex h-full"
     >
       <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:translate-y-[-6px] border border-border/80 flex flex-col flex-1 transition-all duration-300 ease-out group-hover:border-primary/30">

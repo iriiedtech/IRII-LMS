@@ -9,7 +9,7 @@ export default async function StudentDashboard() {
 
   if (!user) return null;
 
-  // Fetch enrolled courses
+  // Fetch enrolled courses with modules and lessons in a single query
   const { data: enrollments } = await supabase
     .from("enrollments")
     .select(`
@@ -18,7 +18,15 @@ export default async function StudentDashboard() {
         id,
         title,
         thumbnail_url,
-        description
+        description,
+        modules (
+          id,
+          lessons (
+            id,
+            title,
+            order_index
+          )
+        )
       )
     `)
     .eq("user_id", user.id);
@@ -32,47 +40,40 @@ export default async function StudentDashboard() {
 
   const completedLessonIds = new Set(progressList?.map((p) => p.lesson_id) || []);
 
-  // Enrich enrollments with lesson progress
-  const coursesWithProgress = await Promise.all(
-    (enrollments || []).map(async (enrollment: any) => {
-      const course = enrollment.courses;
-      if (!course) return null;
+  // Enrich enrollments with lesson progress in-memory
+  const coursesWithProgress = (enrollments || []).map((enrollment: any) => {
+    const course = enrollment.courses;
+    if (!course) return null;
 
-      // Get modules
-      const { data: modules } = await supabase
-        .from("modules")
-        .select("id")
-        .eq("course_id", course.id);
+    const modules = course.modules || [];
+    const lessons = modules
+      .reduce((acc: any[], m: any) => {
+        if (m.lessons) {
+          acc.push(...m.lessons);
+        }
+        return acc;
+      }, [])
+      .sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0));
 
-      const moduleIds = modules?.map((m) => m.id) || [];
+    const totalLessons = lessons.length;
+    const completedLessons = lessons.filter((l: any) => completedLessonIds.has(l.id)).length;
+    const percent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
-      // Get lessons in those modules
-      const { data: lessons } = await supabase
-        .from("lessons")
-        .select("id, title")
-        .in("module_id", moduleIds)
-        .order("order_index", { ascending: true });
+    // Find last watched / first incomplete lesson
+    let lastLessonId = lessons[0]?.id || "";
+    if (lessons.length > 0) {
+      const incomplete = lessons.find((l: any) => !completedLessonIds.has(l.id));
+      if (incomplete) lastLessonId = incomplete.id;
+    }
 
-      const totalLessons = lessons?.length || 0;
-      const completedLessons = lessons?.filter((l) => completedLessonIds.has(l.id)).length || 0;
-      const percent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-
-      // Find last watched / first incomplete lesson
-      let lastLessonId = lessons?.[0]?.id || "";
-      if (lessons && lessons.length > 0) {
-        const incomplete = lessons.find((l) => !completedLessonIds.has(l.id));
-        if (incomplete) lastLessonId = incomplete.id;
-      }
-
-      return {
-        ...course,
-        totalLessons,
-        completedLessons,
-        percent,
-        resumeLessonId: lastLessonId,
-      };
-    })
-  );
+    return {
+      ...course,
+      totalLessons,
+      completedLessons,
+      percent,
+      resumeLessonId: lastLessonId,
+    };
+  });
 
   const activeCourses = coursesWithProgress.filter((c) => c !== null);
 

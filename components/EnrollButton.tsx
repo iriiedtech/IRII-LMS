@@ -136,7 +136,6 @@ function EnrollButton({
   if (isEnrolled) {
     return (
       <Link
-        prefetch={false}
         href={`/dashboard/courses/${courseId}`}
         className="w-full rounded-lg px-6 py-3 font-semibold bg-primary text-primary-foreground hover:bg-primary/95 transition-all duration-300 h-12 flex items-center justify-center gap-2 group"
       >

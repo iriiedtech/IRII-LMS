@@ -4,29 +4,29 @@ import { TrendingUp, Users, LineChart, PieChart, ShoppingBag } from "lucide-reac
 export default async function AdminAnalytics() {
   const supabase = await createClient();
 
-  // 1. Fetch modules, lessons
-  const { data: modules } = await supabase.from("modules").select("id, course_id");
-  const { data: lessons } = await supabase.from("lessons").select("id, module_id");
+  // Fetch modules, lessons, enrollments, progress, orders, and students in parallel
+  const [
+    modulesRes,
+    lessonsRes,
+    enrollmentsRes,
+    progressRes,
+    ordersRes,
+    studentsRes
+  ] = await Promise.all([
+    supabase.from("modules").select("id, course_id"),
+    supabase.from("lessons").select("id, module_id"),
+    supabase.from("enrollments").select("user_id, course_id"),
+    supabase.from("progress").select("user_id, lesson_id, updated_at").eq("is_completed", true),
+    supabase.from("orders").select("id, amount, status, created_at"),
+    supabase.from("users").select("id, created_at").eq("role", "student")
+  ]);
 
-  // 2. Fetch enrollments
-  const { data: enrollments } = await supabase.from("enrollments").select("user_id, course_id");
-
-  // 3. Fetch progress
-  const { data: progress } = await supabase
-    .from("progress")
-    .select("user_id, lesson_id, updated_at")
-    .eq("is_completed", true);
-
-  // 4. Fetch orders
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("id, amount, status, created_at");
-
-  // 5. Fetch student users
-  const { data: students } = await supabase
-    .from("users")
-    .select("id, created_at")
-    .eq("role", "student");
+  const modules = modulesRes.data;
+  const lessons = lessonsRes.data;
+  const enrollments = enrollmentsRes.data;
+  const progress = progressRes.data;
+  const orders = ordersRes.data;
+  const students = studentsRes.data;
 
   const totalStudents = students?.length || 0;
 

@@ -76,7 +76,6 @@ export default async function MyCoursesDashboardPage() {
           </p>
           <Link
             href="/search/courses"
-            prefetch={false}
             className="inline-flex items-center justify-center rounded-xl px-6 py-3 font-bold bg-primary text-primary-foreground hover:bg-primary/95 transition-all shadow-md"
           >
             Browse Curriculum

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from "@/lib/supabase-server";
 import { BookOpen, Filter, GraduationCap, Plus, Search } from "lucide-react";
 import Link from "next/link";
@@ -5,7 +6,7 @@ import Link from "next/link";
 export default async function AdminCourses() {
   const supabase = await createClient();
 
-  // Fetch actual courses
+  // Fetch actual courses and join with enrollments in a single query
   const { data: courses } = await supabase
     .from("courses")
     .select(`
@@ -13,23 +14,19 @@ export default async function AdminCourses() {
       instructor:users!instructor_id (
         full_name,
         avatar_url
+      ),
+      enrollments (
+        id
       )
     `)
     .order("created_at", { ascending: false });
 
-  // Get mock or real student counts
-  const coursesWithDetails = await Promise.all(
-    (courses || []).map(async (course) => {
-      const { count } = await supabase
-        .from("enrollments")
-        .select("*", { count: "exact", head: true })
-        .eq("course_id", course.id);
-      return {
-        ...course,
-        studentCount: count || 0,
-      };
-    })
-  );
+  const coursesWithDetails = (courses || []).map((course: any) => {
+    return {
+      ...course,
+      studentCount: course.enrollments?.length || 0,
+    };
+  });
 
   return (
     <div className="space-y-8 animate-fade-in">

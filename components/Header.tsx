@@ -33,7 +33,6 @@ export default function Header() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              prefetch={false}
               className="flex items-center space-x-2 hover:opacity-90 transition-opacity"
             >
               <BookOpen className="h-6 w-6 text-primary" />
@@ -48,7 +47,6 @@ export default function Header() {
           <div className="flex items-center space-x-2 md:space-x-4">
             <nav>
               <Link
-                prefetch={false}
                 href="/my-courses"
                 className="flex space-x-2 items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors md:border md:border-border md:rounded-md md:px-4 md:py-2"
               >
