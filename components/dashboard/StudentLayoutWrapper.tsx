@@ -152,9 +152,6 @@ export function StudentLayoutWrapper({ children }: { children: React.ReactNode }
             <Link href="/search/courses" className="text-xs md:text-sm font-semibold text-muted-foreground hover:text-foreground shrink-0">
               Curriculum
             </Link>
-            <Link href="/pricing" className="text-xs md:text-sm font-semibold text-muted-foreground hover:text-foreground shrink-0">
-              Pricing
-            </Link>
             <Link href="/dashboard/jobs" className="text-xs md:text-sm font-semibold text-muted-foreground hover:text-foreground shrink-0">
               Job Board
             </Link>

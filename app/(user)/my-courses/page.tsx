@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, createAdminClient } from "@/lib/supabase-server";
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { CourseCard } from "@/components/CourseCard";
@@ -14,8 +14,10 @@ export default async function MyCoursesPage() {
     return redirect("/");
   }
 
-  // Fetch enrolled courses with modules and lessons
-  const { data: enrollments } = await supabase
+  const adminSupabase = createAdminClient();
+
+  // Fetch enrolled courses with modules and lessons using admin client to bypass RLS on instructors/courses
+  const { data: enrollments } = await adminSupabase
     .from('enrollments')
     .select(`
       course_id,
@@ -41,8 +43,8 @@ export default async function MyCoursesPage() {
 
   const enrolledCourses = enrollments?.map(e => e.courses).filter(Boolean) || [];
 
-  // Fetch progress for all completed lessons for this user
-  const { data: progressData } = await supabase
+  // Fetch progress for all completed lessons for this user using admin client
+  const { data: progressData } = await adminSupabase
     .from('progress')
     .select('lesson_id')
     .eq('user_id', user.id)

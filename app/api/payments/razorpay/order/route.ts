@@ -1,6 +1,6 @@
 import { razorpay } from '@/lib/razorpay';
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createClient, createAdminClient } from '@/lib/supabase-server';
 
 export async function POST(req: Request) {
   try {
@@ -12,11 +12,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const adminSupabase = createAdminClient();
     let finalAmount = Number(amount);
 
     if (couponCode) {
-      // Validate coupon code
-      const { data: coupon } = await supabase
+      // Validate coupon code using admin client
+      const { data: coupon } = await adminSupabase
         .from('coupons')
         .select('*')
         .eq('code', couponCode.toUpperCase().trim())
@@ -46,8 +47,8 @@ export async function POST(req: Request) {
 
     const order = await razorpay.orders.create(options);
 
-    // Save order in Supabase
-    await supabase.from('orders').insert({
+    // Save order in Supabase using admin client to bypass RLS restrictions
+    await adminSupabase.from('orders').insert({
       user_id: user.id,
       course_id: courseId,
       razorpay_order_id: order.id,

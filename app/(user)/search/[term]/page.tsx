@@ -14,7 +14,7 @@ export default async function SearchPage({ params }: SearchPageProps) {
   const decodedTerm = decodeURIComponent(term);
   
   const supabase = await createClient();
-  const { data: courses } = await supabase
+  let query = supabase
     .from('courses')
     .select(`
       *,
@@ -23,8 +23,13 @@ export default async function SearchPage({ params }: SearchPageProps) {
         avatar_url
       )
     `)
-    .ilike('title', `%${decodedTerm}%`)
     .eq('is_published', true);
+
+  if (decodedTerm.toLowerCase() !== 'courses' && decodedTerm.toLowerCase() !== 'all') {
+    query = query.ilike('title', `%${decodedTerm}%`);
+  }
+
+  const { data: courses } = await query;
 
   return (
     <div className="h-full pt-16">
@@ -32,10 +37,14 @@ export default async function SearchPage({ params }: SearchPageProps) {
         <div className="flex items-center gap-4 mb-8">
           <Search className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Search Results</h1>
+            <h1 className="text-3xl font-bold">
+              {decodedTerm.toLowerCase() === 'courses' ? 'Explore Curriculum' : 'Search Results'}
+            </h1>
             <p className="text-muted-foreground">
-              Found {courses?.length || 0} result{courses?.length === 1 ? "" : "s"} for
-              &quot;{decodedTerm}&quot;
+              {decodedTerm.toLowerCase() === 'courses' 
+                ? `Discover our ${courses?.length || 0} professional engineering training courses`
+                : `Found ${courses?.length || 0} result${courses?.length === 1 ? "" : "s"} for "${decodedTerm}"`
+              }
             </p>
           </div>
         </div>

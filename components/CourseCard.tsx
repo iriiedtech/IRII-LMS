@@ -83,7 +83,7 @@ export function CourseCard({ course, progress, href }: CourseCardProps) {
                     </div>
                   ) : (
                     <div className="h-6 w-6 mr-2 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <span className="text-[10px] font-bold">{course.instructor.full_name[0]}</span>
+                      <span className="text-[10px] font-bold">{(course.instructor.full_name || "I")[0]}</span>
                     </div>
                   )}
                   <span className="text-xs text-muted-foreground">
