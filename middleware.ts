@@ -15,10 +15,8 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -27,32 +25,45 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // getUser(). A simple mistake can make it very hard to debug
-  // issues with users being randomly logged out.
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    request.nextUrl.pathname !== '/'
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  const { pathname } = request.nextUrl
+
+  // Redirect unauthenticated users away from protected routes
+  const isPublic =
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/about') ||
+    pathname.startsWith('/contact') ||
+    pathname.startsWith('/faq') ||
+    pathname.startsWith('/terms') ||
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/courses') ||
+    pathname.startsWith('/pricing') ||
+    pathname.startsWith('/search')
+
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Admin route protection
-  if (request.nextUrl.pathname.startsWith('/admin')) {
+  // Admin route protection — read from cookie first, fall back to DB
+  if (pathname.startsWith('/admin') && user) {
+    const cachedRole = request.cookies.get('x-user-role')?.value
+
+    if (cachedRole === 'admin') {
+      // Already verified — skip DB query
+      return supabaseResponse
+    }
+
     const { data: profile } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user?.id)
+      .eq('id', user.id)
       .single()
 
     if (profile?.role !== 'admin') {
@@ -60,6 +71,14 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/'
       return NextResponse.redirect(url)
     }
+
+    // Cache role in a short-lived cookie to skip this DB call on next request
+    supabaseResponse.cookies.set('x-user-role', 'admin', {
+      maxAge: 60 * 30, // 30 minutes
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+    })
   }
 
   return supabaseResponse
@@ -68,12 +87,11 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * Match all request paths except:
+     * - _next/static, _next/image (Next.js internals)
+     * - favicon.ico, static assets
+     * - /api routes (handled separately, no auth middleware needed)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

@@ -16,8 +16,24 @@ interface CoursePageProps {
 export async function generateMetadata({ params }: CoursePageProps) {
   const { slugOrId } = await params;
   const adminSupabase = createAdminClient();
-  const { data: courses } = await adminSupabase.from('courses').select('id, title, description');
-  const course = courses?.find(c => c.id === slugOrId || generateSlug(c.title) === slugOrId);
+
+  // Try to fetch by ID first (fast path)
+  let course: { title: string; description: string } | null = null;
+  const isUUID = /^[0-9a-f-]{36}$/i.test(slugOrId);
+  if (isUUID) {
+    const { data } = await adminSupabase
+      .from('courses')
+      .select('id, title, description')
+      .eq('id', slugOrId)
+      .single();
+    course = data;
+  } else {
+    // Slug — fetch all titles and find match (still efficient, titles only)
+    const { data: courses } = await adminSupabase
+      .from('courses')
+      .select('id, title, description');
+    course = courses?.find(c => generateSlug(c.title) === slugOrId) ?? null;
+  }
 
   return {
     title: course ? `${course.title} | IRII Finishing School` : "Course | IRII Finishing School",
@@ -27,34 +43,70 @@ export async function generateMetadata({ params }: CoursePageProps) {
 
 export default async function CoursePage({ params }: CoursePageProps) {
   const { slugOrId } = await params;
-  const supabase = await createClient();
   const adminSupabase = createAdminClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch course details using the admin client to bypass RLS on instructors and unpublished courses
-  const { data: courses } = await adminSupabase
-    .from('courses')
-    .select(`
-      *,
-      instructor:users!instructor_id (
-        full_name,
-        avatar_url
-      ),
-      modules (
-        id,
-        title,
-        order_index,
-        lessons (
+  const isUUID = /^[0-9a-f-]{36}$/i.test(slugOrId);
+
+  // Parallel fetch: auth session + course lookup
+  const supabasePromise = createClient();
+  let courseQueryPromise;
+
+  if (isUUID) {
+    // Fast path: fetch by ID directly
+    courseQueryPromise = adminSupabase
+      .from('courses')
+      .select(`
+        *,
+        instructor:users!instructor_id (
+          full_name,
+          avatar_url
+        ),
+        modules (
           id,
           title,
-          is_free_preview,
-          order_index
+          order_index,
+          lessons (
+            id,
+            title,
+            is_free_preview,
+            order_index
+          )
         )
-      )
-    `);
+      `)
+      .eq('id', slugOrId)
+      .single()
+      .then(({ data }) => data ? [data] : []);
+  } else {
+    // Slug path: fetch all but only select needed fields for slug matching
+    courseQueryPromise = adminSupabase
+      .from('courses')
+      .select(`
+        *,
+        instructor:users!instructor_id (
+          full_name,
+          avatar_url
+        ),
+        modules (
+          id,
+          title,
+          order_index,
+          lessons (
+            id,
+            title,
+            is_free_preview,
+            order_index
+          )
+        )
+      `)
+      .then(({ data }) => data ?? []);
+  }
 
-  const course = courses?.find(c => c.id === slugOrId || generateSlug(c.title) === slugOrId);
+  const [supabase, courses] = await Promise.all([supabasePromise, courseQueryPromise]);
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const course = isUUID
+    ? courses[0] ?? null
+    : (courses as any[]).find((c: any) => generateSlug(c.title) === slugOrId) ?? null;
 
   if (!course) {
     return (

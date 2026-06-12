@@ -14,49 +14,51 @@ interface LessonPageProps {
 }
 
 export default async function LessonPage({ params }: LessonPageProps) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
   const { courseId, lessonId } = await params;
+  const supabase = await createClient();
+
+  // Parallel: auth + lesson fetch
+  const [{ data: { user } }, { data: lesson }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('lessons').select('*').eq('id', lessonId).single(),
+  ]);
 
   if (!user) return redirect("/login");
-
-  // Check enrollment unless it's a free preview
-  const { data: lesson } = await supabase
-    .from('lessons')
-    .select('*')
-    .eq('id', lessonId)
-    .single();
 
   if (!lesson) {
     return redirect(`/dashboard/courses/${courseId}`);
   }
 
-  if (!lesson.is_free_preview) {
-    const { data: enrollment } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .single();
-
-    if (!enrollment) {
-      return redirect(`/courses/${courseId}`);
-    }
-  }
-
-  // Get VdoCipher OTP & PlaybackInfo or fall back to Gumlet
+  // Parallel: enrollment check (only if needed) + VdoCipher OTP request
   let vdoOtp = "";
   let vdoPlaybackInfo = "";
   let secureVideoUrl = null;
 
-  if (lesson.video_url) {
-    const vdoData = await getVdoCipherOtp(lesson.video_url, user.email || "student@irii.in");
-    if (vdoData) {
-      vdoOtp = vdoData.otp;
-      vdoPlaybackInfo = vdoData.playbackInfo;
-    } else {
-      secureVideoUrl = getGumletSignedUrl(lesson.video_url);
-    }
+  const enrollmentCheckPromise = lesson.is_free_preview
+    ? Promise.resolve(true) // skip DB check for free lessons
+    : supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single()
+        .then(({ data }) => !!data);
+
+  const videoPromise = lesson.video_url
+    ? getVdoCipherOtp(lesson.video_url, user.email || "student@irii.in")
+    : Promise.resolve(null);
+
+  const [isEnrolled, vdoData] = await Promise.all([enrollmentCheckPromise, videoPromise]);
+
+  if (!lesson.is_free_preview && !isEnrolled) {
+    return redirect(`/courses/${courseId}`);
+  }
+
+  if (vdoData) {
+    vdoOtp = vdoData.otp;
+    vdoPlaybackInfo = vdoData.playbackInfo;
+  } else if (lesson.video_url) {
+    secureVideoUrl = getGumletSignedUrl(lesson.video_url);
   }
 
   return (

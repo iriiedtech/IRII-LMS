@@ -23,7 +23,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export const dynamic = "force-dynamic";
+// ISR: Revalidate every 5 minutes — courses don't change in real-time
+export const revalidate = 300;
 
 export default async function Home() {
   const supabase = await createClient();

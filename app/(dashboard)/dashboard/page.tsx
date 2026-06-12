@@ -9,34 +9,49 @@ export default async function StudentDashboard() {
 
   if (!user) return null;
 
-  // Fetch enrolled courses with modules and lessons in a single query
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select(`
-      course_id,
-      courses (
-        id,
-        title,
-        thumbnail_url,
-        description,
-        modules (
+  // Fetch enrolled courses, progress and certificates all in parallel
+  const [enrollmentsRes, progressRes, certificatesRes] = await Promise.all([
+    supabase
+      .from("enrollments")
+      .select(`
+        course_id,
+        courses (
           id,
-          lessons (
+          title,
+          thumbnail_url,
+          description,
+          modules (
             id,
-            title,
-            order_index
+            lessons (
+              id,
+              title,
+              order_index
+            )
           )
         )
-      )
-    `)
-    .eq("user_id", user.id);
+      `)
+      .eq("user_id", user.id),
+    supabase
+      .from("progress")
+      .select("lesson_id, is_completed")
+      .eq("user_id", user.id)
+      .eq("is_completed", true),
+    supabase
+      .from("certificates")
+      .select(`
+        id,
+        pdf_url,
+        issued_at,
+        courses (
+          title
+        )
+      `)
+      .eq("user_id", user.id),
+  ]);
 
-  // Fetch user progress records
-  const { data: progressList } = await supabase
-    .from("progress")
-    .select("lesson_id, is_completed")
-    .eq("user_id", user.id)
-    .eq("is_completed", true);
+  const enrollments = enrollmentsRes.data;
+  const progressList = progressRes.data;
+  const certificates = certificatesRes.data;
 
   const completedLessonIds = new Set(progressList?.map((p) => p.lesson_id) || []);
 
@@ -76,19 +91,6 @@ export default async function StudentDashboard() {
   });
 
   const activeCourses = coursesWithProgress.filter((c) => c !== null);
-
-  // Fetch earned certificates
-  const { data: certificates } = await supabase
-    .from("certificates")
-    .select(`
-      id,
-      pdf_url,
-      issued_at,
-      courses (
-        title
-      )
-    `)
-    .eq("user_id", user.id);
 
   return (
     <div className="space-y-10 animate-fade-in">

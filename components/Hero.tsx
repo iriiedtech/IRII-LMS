@@ -12,7 +12,7 @@ const CAROUSEL_IMAGES = [
     caption: "Practical Site Inspections & Foundations"
   },
   {
-    url: "https://images.unsplash.com/photo-1581094288338-2314dddb7eed?q=80&w=800&auto=format&fit=crop",
+    url: "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=800&auto=format&fit=crop",
     caption: "Advanced Structural Modeling & ETABS"
   },
   {
