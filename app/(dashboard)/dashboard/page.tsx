@@ -2,6 +2,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { BookOpen, GraduationCap, Play, Trophy, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export default async function StudentDashboard() {
   const supabase = await createClient();
@@ -9,7 +10,16 @@ export default async function StudentDashboard() {
 
   if (!user) return null;
 
-  // Fetch enrolled courses, progress and certificates all in parallel
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role === "admin") {
+    redirect("/admin");
+  }
+
   const [enrollmentsRes, progressRes, certificatesRes] = await Promise.all([
     supabase
       .from("enrollments")
@@ -121,8 +131,8 @@ export default async function StudentDashboard() {
           {activeCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {activeCourses.map((course: any, idx: number) => (
-                <div 
-                  key={course.id} 
+                <div
+                  key={course.id}
                   className="bg-card border border-border/80 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all duration-300 ease-out flex flex-col justify-between group animate-slide-up"
                   style={{ animationDelay: `${(idx + 1) * 0.1}s` }}
                 >
@@ -131,8 +141,8 @@ export default async function StudentDashboard() {
                       {course.thumbnail_url ? (
                         <div className="relative w-full h-full">
                           {/* Fallback to simple img but styling it beautifully to avoid linter errors since next/image needs domain configs */}
-                          <img 
-                            src={course.thumbnail_url} 
+                          <img
+                            src={course.thumbnail_url}
                             alt={course.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
@@ -146,7 +156,7 @@ export default async function StudentDashboard() {
                     <div className="p-6 space-y-4">
                       <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-1">{course.title}</h3>
                       <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{course.description}</p>
-                      
+
                       {/* Progress Bar */}
                       <div className="space-y-2 pt-2">
                         <div className="flex justify-between text-[11px] font-bold">
@@ -154,8 +164,8 @@ export default async function StudentDashboard() {
                           <span className="text-foreground">{course.completedLessons}/{course.totalLessons} Lessons</span>
                         </div>
                         <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary rounded-full transition-all duration-500" 
+                          <div
+                            className="h-full bg-primary rounded-full transition-all duration-500"
                             style={{ width: `${course.percent}%` }}
                           />
                         </div>
@@ -164,7 +174,7 @@ export default async function StudentDashboard() {
                   </div>
 
                   <div className="p-6 pt-0 border-t border-border/40 mt-4 flex items-center justify-between gap-4">
-                    <Link 
+                    <Link
                       href={`/dashboard/courses/${course.id}/lessons/${course.resumeLessonId}`}
                       className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:bg-primary/95 transition-all shadow-sm hover:shadow-md hover:scale-[1.01]"
                     >
@@ -233,8 +243,8 @@ export default async function StudentDashboard() {
               Direct recruitment channels are open for our graduates. Access placement assistance, job boards, and resume reviews.
             </p>
             <div className="flex gap-2 pt-2">
-              <Link 
-                href="/dashboard/jobs" 
+              <Link
+                href="/dashboard/jobs"
                 className="text-xs font-bold text-primary hover:underline"
               >
                 Browse Job Board →

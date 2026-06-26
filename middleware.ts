@@ -51,12 +51,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Admin route protection — read from cookie first, fall back to DB
-  if (pathname.startsWith('/admin') && user) {
+  if ((pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) && user) {
     const cachedRole = request.cookies.get('x-user-role')?.value
 
-    if (cachedRole === 'admin') {
-      // Already verified — skip DB query
+    if (cachedRole) {
+      if (cachedRole === 'admin' && pathname.startsWith('/dashboard')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/admin'
+        return NextResponse.redirect(url)
+      }
+      if (cachedRole !== 'admin' && pathname.startsWith('/admin')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
       return supabaseResponse
     }
 
@@ -66,19 +74,40 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/'
-      return NextResponse.redirect(url)
-    }
+    const role = profile?.role || 'student'
 
-    // Cache role in a short-lived cookie to skip this DB call on next request
-    supabaseResponse.cookies.set('x-user-role', 'admin', {
+    supabaseResponse.cookies.set('x-user-role', role, {
       maxAge: 60 * 30, // 30 minutes
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
     })
+
+    if (role === 'admin' && pathname.startsWith('/dashboard')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin'
+      const res = NextResponse.redirect(url)
+      res.cookies.set('x-user-role', 'admin', {
+        maxAge: 60 * 30,
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+      })
+      return res
+    }
+
+    if (role !== 'admin' && pathname.startsWith('/admin')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      const res = NextResponse.redirect(url)
+      res.cookies.set('x-user-role', role, {
+        maxAge: 60 * 30,
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+      })
+      return res
+    }
   }
 
   return supabaseResponse
@@ -86,12 +115,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static, _next/image (Next.js internals)
-     * - favicon.ico, static assets
-     * - /api routes (handled separately, no auth middleware needed)
-     */
     '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

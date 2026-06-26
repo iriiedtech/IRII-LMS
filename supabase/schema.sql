@@ -214,12 +214,7 @@ BEGIN
     new.email,
     COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'User'),
     COALESCE(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture', ''),
-    CASE 
-      WHEN new.email = 'rishisingh1034@gmail.com' 
-           OR new.email LIKE 'admin@%' 
-           OR new.email LIKE '%@irii.in' THEN 'admin'
-      ELSE 'student'
-    END
+    'student'
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN new;

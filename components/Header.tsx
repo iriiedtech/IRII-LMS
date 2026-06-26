@@ -10,17 +10,53 @@ import { createClient } from "@/lib/supabase";
 
 export default function Header() {
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string>("student");
   const supabase = createClient();
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      if (user) {
+        const email = user.email?.toLowerCase() || "";
+        const isAdmin = email.startsWith("admin@") ||
+          email.endsWith("@irii.in") ||
+          email === "irii.edtech@gmail.com";
+        setRole(isAdmin ? "admin" : "student");
+
+        const { data: profile } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        if (profile?.role) {
+          setRole(profile.role);
+        }
+      }
     };
     getUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        const email = currentUser.email?.toLowerCase() || "";
+        const isAdmin = email.startsWith("admin@") ||
+          email.endsWith("@irii.in") ||
+          email === "irii.edtech@gmail.com";
+        setRole(isAdmin ? "admin" : "student");
+
+        const { data: profile } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", currentUser.id)
+          .single();
+        if (profile?.role) {
+          setRole(profile.role);
+        }
+      } else {
+        setRole("student");
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -57,7 +93,7 @@ export default function Header() {
 
             {user ? (
               <Button asChild variant="default" size="default">
-                <Link href="/dashboard">Dashboard</Link>
+                <Link href={role === "admin" ? "/admin" : "/dashboard"}>Dashboard</Link>
               </Button>
             ) : (
               <Button asChild variant="outline" size="default">
