@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, BookOpen, Clock, Award, ShieldCheck, Terminal, GraduationCap, Users, Star } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock, Award, ShieldCheck, Terminal, GraduationCap, Users, Star, Play } from "lucide-react";
 import EnrollButton from "@/components/EnrollButton";
 import { createClient, createAdminClient } from "@/lib/supabase-server";
 import { generateSlug } from "@/lib/slug";
@@ -326,29 +326,50 @@ export default async function CoursePage({ params }: CoursePageProps) {
                         {(!module.lessons || module.lessons.length === 0) ? (
                           <div className="p-4 text-xs text-muted-foreground text-center">No lessons added to this module.</div>
                         ) : (
-                          module.lessons?.sort((a: any, b: any) => a.order_index - b.order_index).map((lesson: any, lessonIndex: number) => (
-                            <div
-                              key={lesson.id}
-                              className="p-5 hover:bg-muted/10 transition-colors flex items-center justify-between gap-4 group"
-                            >
-                              <div className="flex items-center gap-4 min-w-0">
-                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted border text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 flex items-center justify-center text-xs font-bold transition-all duration-350 shadow-inner">
-                                  {lessonIndex + 1}
+                          module.lessons?.sort((a: any, b: any) => a.order_index - b.order_index).map((lesson: any, lessonIndex: number) => {
+                            const isFreePreview = lesson.is_free_preview && !isEnrolled;
+                            const isAccessible = isFreePreview || isEnrolled;
+                            const lessonHref = isEnrolled
+                              ? `/dashboard/courses/${course.id}/lessons/${lesson.id}`
+                              : isFreePreview
+                              ? `/preview/${course.id}/lessons/${lesson.id}`
+                              : null;
+
+                            const LessonWrapper = lessonHref ? Link : 'div';
+                            const wrapperProps = lessonHref ? { href: lessonHref } : {};
+
+                            return (
+                              <LessonWrapper
+                                key={lesson.id}
+                                {...(wrapperProps as any)}
+                                className={`p-5 transition-colors flex items-center justify-between gap-4 group ${
+                                  isAccessible ? 'hover:bg-muted/10 cursor-pointer' : 'opacity-70'
+                                }`}
+                              >
+                                <div className="flex items-center gap-4 min-w-0">
+                                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted border text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 flex items-center justify-center text-xs font-bold transition-all duration-350 shadow-inner">
+                                    {lessonIndex + 1}
+                                  </div>
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <BookOpen className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                                    <span className="text-xs font-bold text-foreground/80 group-hover:text-foreground transition-colors truncate">
+                                      {lesson.title}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <BookOpen className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                                  <span className="text-xs font-bold text-foreground/80 group-hover:text-foreground transition-colors truncate">
-                                    {lesson.title}
+                                {isFreePreview ? (
+                                  <span className="shrink-0 flex items-center gap-1.5 text-[9px] font-extrabold text-green-600 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm hover:bg-green-500/20 transition-colors">
+                                    <Play className="h-2.5 w-2.5 fill-green-600" />
+                                    Free Preview
                                   </span>
-                                </div>
-                              </div>
-                              {lesson.is_free_preview && !isEnrolled && (
-                                <span className="shrink-0 text-[9px] font-extrabold text-green-600 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                                  Free Preview
-                                </span>
-                              )}
-                            </div>
-                          ))
+                                ) : !isEnrolled ? (
+                                  <span className="shrink-0 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">
+                                    🔒
+                                  </span>
+                                ) : null}
+                              </LessonWrapper>
+                            );
+                          })
                         )}
                       </div>
                     </div>

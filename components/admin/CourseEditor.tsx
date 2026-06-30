@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, Save, Plus, Trash2, Edit2, FileText, Video, BookOpen } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowLeft, Save, Plus, Trash2, Edit2, FileText, Video, BookOpen, Upload, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,8 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
   const [isPublished, setIsPublished] = useState(course.is_published || false);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   // Curriculum State
   const [modules, setModules] = useState<any[]>(initialModules || []);
@@ -44,6 +46,35 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
 
   const supabase = createClient();
   const router = useRouter();
+
+  // Upload thumbnail image to Supabase Storage
+  const handleThumbnailUpload = async (file: File) => {
+    if (!file) return;
+    setUploadingThumbnail(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("courseId", course.id);
+
+      const res = await fetch("/api/admin/upload-thumbnail", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(`Upload failed: ${data.error}`);
+        return;
+      }
+
+      setThumbnailUrl(data.url);
+    } catch (err: any) {
+      alert(err.message || "Thumbnail upload failed.");
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
 
   // Save Course Info
   const handleSaveCourse = async (e: React.FormEvent) => {
@@ -297,13 +328,53 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-muted-foreground mb-1 uppercase">Thumbnail URL</label>
+                <label className="block text-[10px] font-bold text-muted-foreground mb-1 uppercase">Thumbnail Image</label>
+                {/* Preview */}
+                {thumbnailUrl && (
+                  <div className="mb-2 relative w-full aspect-video rounded-lg overflow-hidden border bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={thumbnailUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                {/* Upload area */}
+                <div
+                  className="border-2 border-dashed border-border hover:border-primary/50 rounded-lg p-4 text-center cursor-pointer transition-colors bg-muted/20 hover:bg-primary/5"
+                  onClick={() => thumbnailInputRef.current?.click()}
+                >
+                  {uploadingThumbnail ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[11px] text-muted-foreground">Uploading…</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-[11px] font-semibold text-muted-foreground">Click to upload image</span>
+                      <span className="text-[10px] text-muted-foreground/70">PNG, JPG, WebP up to 5MB</span>
+                    </div>
+                  )}
+                </div>
                 <input
-                  type="url"
-                  value={thumbnailUrl}
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary focus:outline-none"
+                  ref={thumbnailInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleThumbnailUpload(file);
+                  }}
                 />
+                {/* Manual URL fallback */}
+                <div className="mt-2 flex items-center gap-1.5">
+                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <input
+                    type="url"
+                    value={thumbnailUrl}
+                    onChange={(e) => setThumbnailUrl(e.target.value)}
+                    placeholder="Or paste image URL directly"
+                    className="flex-1 border rounded-md px-2 py-1 text-[11px] bg-background focus:ring-1 focus:ring-primary focus:outline-none text-muted-foreground"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-2 py-2">

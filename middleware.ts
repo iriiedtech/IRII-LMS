@@ -42,6 +42,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/terms') ||
     pathname.startsWith('/privacy') ||
     pathname.startsWith('/courses') ||
+    pathname.startsWith('/preview') ||
     pathname.startsWith('/pricing') ||
     pathname.startsWith('/search')
 

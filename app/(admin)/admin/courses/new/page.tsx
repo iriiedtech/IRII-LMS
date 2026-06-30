@@ -98,11 +98,12 @@ export default function NewCourse() {
               <label className="block text-xs font-bold text-muted-foreground mb-1 uppercase">Thumbnail URL (Optional)</label>
               <input
                 type="url"
-                placeholder="https://images.unsplash.com/photo..."
+                placeholder="https://example.com/image.jpg"
                 value={thumbnailUrl}
                 onChange={(e) => setThumbnailUrl(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary focus:outline-none"
               />
+              <p className="text-[10px] text-muted-foreground mt-1">Paste any image URL. File upload is available after the course is created.</p>
             </div>
           </div>
 
