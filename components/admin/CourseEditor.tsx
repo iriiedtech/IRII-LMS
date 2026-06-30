@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { ArrowLeft, Save, Plus, Trash2, Edit2, FileText, Video, BookOpen, Upload, ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Edit2, FileText, Video, BookOpen, Upload, ImageIcon, Paperclip, X, FileImage, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -43,6 +43,12 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
   // Module state
   const [showModuleInput, setShowModuleInput] = useState(false);
   const [newModuleTitle, setNewModuleTitle] = useState("");
+
+  // Materials state (per lesson)
+  const [lessonMaterials, setLessonMaterials] = useState<any[]>([]);
+  const [uploadingMaterial, setUploadingMaterial] = useState(false);
+  const [materialTitle, setMaterialTitle] = useState("");
+  const materialInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createClient();
   const router = useRouter();
@@ -191,12 +197,70 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
     setLessonContent("");
     setLessonVideoUrl("");
     setLessonIsFree(false);
-    
+    setLessonMaterials([]);
+    setMaterialTitle("");
     // Find next order index
     const moduleLessons = lessons.filter(l => l.module_id === moduleId);
     setLessonOrder(String(moduleLessons.length + 1));
-    
     setShowLessonModal(true);
+  };
+
+  // Upload a material file
+  const handleUploadMaterial = async (file: File) => {
+    if (!editingLesson) {
+      alert("Please save the lesson first before adding materials.");
+      return;
+    }
+    setUploadingMaterial(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("lessonId", editingLesson.id);
+      form.append("title", materialTitle.trim() || file.name);
+
+      const res = await fetch("/api/admin/lesson-materials", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(`Upload failed: ${data.error}`);
+        return;
+      }
+      setLessonMaterials((prev) => [...prev, data.material]);
+      setMaterialTitle("");
+      if (materialInputRef.current) materialInputRef.current.value = "";
+    } catch (err: any) {
+      alert(err.message || "Upload failed.");
+    } finally {
+      setUploadingMaterial(false);
+    }
+  };
+
+  // Delete a material
+  const handleDeleteMaterial = async (materialId: string) => {
+    if (!confirm("Remove this material?")) return;
+    const res = await fetch("/api/admin/lesson-materials", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ materialId }),
+    });
+    if (res.ok) {
+      setLessonMaterials((prev) => prev.filter((m) => m.id !== materialId));
+    } else {
+      const data = await res.json();
+      alert(data.error);
+    }
+  };
+
+  // Fetch materials for a lesson
+  const fetchMaterials = async (lessonId: string) => {
+    const { data } = await supabase
+      .from("lesson_materials")
+      .select("*")
+      .eq("lesson_id", lessonId)
+      .order("created_at", { ascending: true });
+    setLessonMaterials(data || []);
   };
 
   // Open Lesson Modal (Edit)
@@ -208,7 +272,11 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
     setLessonVideoUrl(lesson.video_url || "");
     setLessonIsFree(lesson.is_free_preview || false);
     setLessonOrder(String(lesson.order_index));
+    setLessonMaterials([]);
+    setMaterialTitle("");
     setShowLessonModal(true);
+    // Fetch existing materials
+    fetchMaterials(lesson.id);
   };
 
   // Save Lesson (Insert or Update)
@@ -623,6 +691,96 @@ export default function CourseEditor({ course, initialModules, initialLessons }:
                   rows={5}
                   className="w-full border rounded-lg px-3 py-2 text-xs bg-background focus:outline-none"
                 />
+              </div>
+
+              {/* ── Reference Materials ── */}
+              <div className="border-t pt-4 mt-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <Paperclip className="h-4 w-4 text-primary" />
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Reference Materials (PDF / Images)</span>
+                </div>
+
+                {!editingLesson && (
+                  <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                    💡 Save the lesson first, then reopen it to attach materials.
+                  </p>
+                )}
+
+                {/* Existing materials list */}
+                {lessonMaterials.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {lessonMaterials.map((mat) => (
+                      <div key={mat.id} className="flex items-center justify-between gap-2 p-2.5 bg-muted/30 border rounded-lg">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {mat.file_type === "pdf" ? (
+                            <FileText className="h-4 w-4 text-red-500 shrink-0" />
+                          ) : (
+                            <FileImage className="h-4 w-4 text-blue-500 shrink-0" />
+                          )}
+                          <span className="text-xs font-semibold text-foreground truncate">{mat.title}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            {mat.file_size ? `${(mat.file_size / 1024).toFixed(0)} KB` : ""}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <a
+                            href={mat.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 text-muted-foreground hover:text-primary"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                          <button
+                            onClick={() => handleDeleteMaterial(mat.id)}
+                            className="p-1 text-destructive hover:text-destructive/80"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {editingLesson && (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Material title (optional — defaults to filename)"
+                      value={materialTitle}
+                      onChange={(e) => setMaterialTitle(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <div
+                      className="border-2 border-dashed border-border hover:border-primary/50 rounded-lg p-4 text-center cursor-pointer transition-colors bg-muted/10 hover:bg-primary/5"
+                      onClick={() => materialInputRef.current?.click()}
+                    >
+                      {uploadingMaterial ? (
+                        <div className="flex flex-col items-center gap-1.5">
+                          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          <span className="text-[11px] text-muted-foreground">Uploading…</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1">
+                          <Upload className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-[11px] font-semibold text-muted-foreground">Click to upload PDF or image</span>
+                          <span className="text-[10px] text-muted-foreground/60">PDF, JPG, PNG, WebP — up to 20 MB</span>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      ref={materialInputRef}
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadMaterial(file);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
