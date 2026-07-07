@@ -46,10 +46,17 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/pricing') ||
     pathname.startsWith('/search')
 
-  if (!user && !isPublic) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  if (!user) {
+    // Clear cached role cookie on logout/unauthenticated
+    supabaseResponse.cookies.delete('x-user-role')
+    if (!isPublic) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      const redirectRes = NextResponse.redirect(url)
+      redirectRes.cookies.delete('x-user-role')
+      return redirectRes
+    }
+    return supabaseResponse
   }
 
   if ((pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) && user) {

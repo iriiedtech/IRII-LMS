@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 // The client you created from the Server-Side Auth instructions
-import { createClient } from '@/lib/supabase-server'
+import { createClient, createAdminClient } from '@/lib/supabase-server'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -21,8 +21,9 @@ export async function GET(request: Request) {
                         email === "rishisingh1034@gmail.com";
         const role = isAdmin ? "admin" : "student";
 
-        // Create or update user profile in public.users table
-        await supabase.from('users').upsert({
+        // Create or update user profile in public.users table using admin client to bypass RLS
+        const adminSupabase = createAdminClient()
+        await adminSupabase.from('users').upsert({
           id: user.id,
           email: user.email!,
           full_name: user.user_metadata.full_name || user.user_metadata.name || 'User',
