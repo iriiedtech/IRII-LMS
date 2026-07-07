@@ -10,6 +10,7 @@ interface Comment {
   content: string;
   created_at: string;
   user_name: string;
+  user_role?: string;
   parent_id?: string | null;
 }
 
@@ -195,7 +196,14 @@ export function LessonComments({ lessonId, currentUserId, currentUserName }: Les
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-foreground">{comment.user_name}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-foreground">{comment.user_name}</span>
+                {comment.user_role === "admin" && (
+                  <span className="px-1.5 py-0.5 bg-[#004D61]/10 text-[#004D61] border border-[#004D61]/25 rounded text-[8px] font-black uppercase tracking-wider">
+                    Instructor
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-muted-foreground">
                   {new Date(comment.created_at).toLocaleDateString(undefined, {

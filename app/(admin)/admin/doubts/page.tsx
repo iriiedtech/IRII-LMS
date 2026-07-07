@@ -22,6 +22,7 @@ interface Comment {
   parent_id: string | null;
   created_at: string;
   user_name: string;
+  user_role?: string;
   lesson_title?: string;
   course_title?: string;
   course_id?: string;
@@ -109,6 +110,7 @@ export default function AdminDoubtsPage() {
       parent_id: parentComment.id,
       created_at: new Date().toISOString(),
       user_name: "Instructor (Admin)",
+      user_role: "admin",
       lesson_title: parentComment.lesson_title,
       course_title: parentComment.course_title,
       course_id: parentComment.course_id
@@ -389,9 +391,16 @@ export default function AdminDoubtsPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-foreground">
-                              {reply.user_name}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] font-bold text-foreground">
+                                {reply.user_name}
+                              </span>
+                              {reply.user_role === "admin" && (
+                                <span className="px-1.5 py-0.5 bg-[#004D61]/10 text-[#004D61] border border-[#004D61]/25 rounded text-[8px] font-black uppercase tracking-wider">
+                                  Instructor
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2">
                               <span className="text-[9px] text-muted-foreground">
                                 {new Date(reply.created_at).toLocaleDateString(undefined, {

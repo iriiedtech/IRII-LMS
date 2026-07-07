@@ -133,6 +133,10 @@ ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can read their own data" ON users
   FOR SELECT USING (auth.uid() = id);
 
+-- Public can read basic profile info of any user
+CREATE POLICY "Anyone can view user profiles" ON users
+  FOR SELECT USING (TRUE);
+
 -- Public can view published courses
 CREATE POLICY "Public can view published courses" ON courses
   FOR SELECT USING (is_published = TRUE);

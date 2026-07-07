@@ -41,12 +41,26 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const enrollmentCheckPromise = lesson.is_free_preview
     ? Promise.resolve(true) // skip DB check for free lessons
     : supabase
-        .from('enrollments')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('course_id', courseId)
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
         .single()
-        .then(({ data }) => !!data);
+        .then(async ({ data: profile }) => {
+          const isAdmin = profile?.role === "admin" ||
+                          user.email?.toLowerCase().startsWith("admin@") ||
+                          user.email?.toLowerCase().endsWith("@irii.in") ||
+                          user.email?.toLowerCase() === "irii.edtech@gmail.com" ||
+                          user.email?.toLowerCase() === "rishisingh1034@gmail.com";
+          if (isAdmin) return true;
+
+          const { data } = await supabase
+            .from('enrollments')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('course_id', courseId)
+            .single();
+          return !!data;
+        });
 
   const videoPromise = lesson.video_url
     ? getVdoCipherOtp(lesson.video_url, user.email || "student@irii.in")

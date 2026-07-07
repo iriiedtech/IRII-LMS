@@ -31,12 +31,25 @@ function EnrollButton({
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    let isMounted = true;
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setLoadingUser(false);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (isMounted) {
+          setUser(user);
+        }
+      } catch (error) {
+        console.error("Error fetching user in EnrollButton:", error);
+      } finally {
+        if (isMounted) {
+          setLoadingUser(false);
+        }
+      }
     };
     getUser();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleApplyCoupon = async () => {

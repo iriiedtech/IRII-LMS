@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, createAdminClient } from "@/lib/supabase-server";
 
 export async function GET(req: Request) {
   try {
@@ -10,8 +10,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing lessonId" }, { status: 400 });
     }
 
-    const supabase = await createClient();
-    const { data: comments, error } = await supabase
+    const adminSupabase = createAdminClient();
+    const { data: comments, error } = await adminSupabase
       .from("lesson_comments")
       .select(`
         id,
@@ -22,7 +22,8 @@ export async function GET(req: Request) {
         created_at,
         users (
           full_name,
-          email
+          email,
+          role
         )
       `)
       .eq("lesson_id", lessonId)
@@ -39,7 +40,8 @@ export async function GET(req: Request) {
       content: comment.content,
       parent_id: comment.parent_id || null,
       created_at: comment.created_at,
-      user_name: comment.users?.full_name || comment.users?.email || "Student"
+      user_name: comment.users?.full_name || comment.users?.email || "Student",
+      user_role: comment.users?.role || "student"
     }));
 
     return NextResponse.json({ comments: formattedComments });
