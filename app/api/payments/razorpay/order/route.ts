@@ -13,7 +13,19 @@ export async function POST(req: Request) {
     }
 
     const adminSupabase = createAdminClient();
-    let finalAmount = Number(amount);
+    
+    // Fetch the actual course price from database (never trust client-supplied amount)
+    const { data: course, error: courseError } = await adminSupabase
+      .from('courses')
+      .select('price')
+      .eq('id', courseId)
+      .single();
+
+    if (courseError || !course) {
+      return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+    }
+
+    let finalAmount = Number(course.price);
 
     if (couponCode) {
       // Validate coupon code using admin client
@@ -34,6 +46,7 @@ export async function POST(req: Request) {
           } else if (coupon.discount_type === 'flat') {
             finalAmount = finalAmount - Number(coupon.discount_value);
           }
+          finalAmount = Math.round(finalAmount);
           if (finalAmount < 0) finalAmount = 0;
         }
       }
@@ -48,13 +61,18 @@ export async function POST(req: Request) {
     const order = await razorpay.orders.create(options);
 
     // Save order in Supabase using admin client to bypass RLS restrictions
-    await adminSupabase.from('orders').insert({
+    const { error: dbError } = await adminSupabase.from('orders').insert({
       user_id: user.id,
       course_id: courseId,
       razorpay_order_id: order.id,
       amount: finalAmount,
       status: 'pending',
     });
+
+    if (dbError) {
+      console.error('DATABASE_SAVE_ORDER_ERROR', dbError);
+      return NextResponse.json({ error: 'Failed to record order' }, { status: 500 });
+    }
 
     // If coupon was applied, record coupon usage (tentatively, we will finalize it upon payment verification)
     return NextResponse.json({

@@ -17,19 +17,32 @@ export async function POST(req: Request) {
 
     if (isAuthentic) {
       // Update order status using admin client
-      const { data: order } = await adminSupabase
+      const { data: order, error: updateError } = await adminSupabase
         .from('orders')
         .update({ status: 'paid', razorpay_payment_id })
         .eq('razorpay_order_id', razorpay_order_id)
         .select()
         .single();
 
-      if (order) {
-        // Enroll user in course using admin client
-        await adminSupabase.from('enrollments').insert({
-          user_id: order.user_id,
-          course_id: order.course_id,
-        });
+      if (updateError || !order) {
+        console.error('VERIFY_ORDER_UPDATE_ERROR', updateError || 'Order not found in DB');
+        return NextResponse.json({ error: 'Order update failed' }, { status: 400 });
+      }
+
+      // Enroll user in course using admin client
+      const { error: enrollError } = await adminSupabase.from('enrollments').insert({
+        user_id: order.user_id,
+        course_id: order.course_id,
+      });
+
+      if (enrollError) {
+        // Code 23505 is PostgreSQL unique_violation (user already enrolled)
+        if (enrollError.code === '23505') {
+          console.log('User already enrolled, ignoring duplicate enrollment insert');
+        } else {
+          console.error('VERIFY_ENROLLMENT_ERROR', enrollError);
+          return NextResponse.json({ error: 'Enrollment failed' }, { status: 500 });
+        }
       }
 
       return NextResponse.json({ message: 'Success' });

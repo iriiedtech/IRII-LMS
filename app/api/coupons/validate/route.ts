@@ -36,12 +36,12 @@ export async function POST(req: Request) {
     let finalAmount = Number(amount);
 
     if (coupon.discount_type === 'percentage') {
-      discount = finalAmount * (Number(coupon.discount_value) / 100);
+      discount = Math.round(finalAmount * (Number(coupon.discount_value) / 100));
     } else if (coupon.discount_type === 'flat') {
-      discount = Number(coupon.discount_value);
+      discount = Math.round(Number(coupon.discount_value));
     }
 
-    finalAmount = finalAmount - discount;
+    finalAmount = Math.round(finalAmount - discount);
     if (finalAmount < 0) finalAmount = 0;
 
     return NextResponse.json({
