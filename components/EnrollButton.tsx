@@ -13,44 +13,43 @@ function EnrollButton({
   isEnrolled,
   price,
   courseTitle,
+  initialUser,
 }: {
   courseId: string;
   isEnrolled: boolean;
   price: number;
   courseTitle: string;
+  initialUser?: any;
 }) {
-  const [user, setUser] = useState<any>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const [user, setUser] = useState<any>(initialUser ?? null);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState("");
+  const [enrollError, setEnrollError] = useState("");
   const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
   
   const supabase = createClient();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    if (initialUser !== undefined) return;
     let isMounted = true;
     const getUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user: fetchedUser } } = await supabase.auth.getUser();
         if (isMounted) {
-          setUser(user);
+          setUser(fetchedUser);
         }
       } catch (error) {
         console.error("Error fetching user in EnrollButton:", error);
-      } finally {
-        if (isMounted) {
-          setLoadingUser(false);
-        }
       }
     };
     getUser();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialUser]);
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
@@ -79,33 +78,58 @@ function EnrollButton({
   };
 
   const handleEnroll = async () => {
-    if (!user) {
-      router.push('/login');
+    setEnrollError("");
+    let activeUser = user;
+    if (!activeUser) {
+      try {
+        const { data: { user: fetchedUser } } = await supabase.auth.getUser();
+        if (!fetchedUser) {
+          router.push('/login');
+          return;
+        }
+        activeUser = fetchedUser;
+        setUser(fetchedUser);
+      } catch {
+        router.push('/login');
+        return;
+      }
+    }
+
+    if (typeof window === "undefined" || !(window as any).Razorpay) {
+      setEnrollError("Payment gateway is loading. Please try again in a moment.");
       return;
     }
 
-    startTransition(async () => {
-      try {
-        const response = await fetch('/api/payments/razorpay/order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            courseId, 
-            amount: price,
-            couponCode: appliedCoupon ? appliedCoupon.code : null
-          }),
-        });
+    setIsEnrolling(true);
 
-        const order = await response.json();
+    try {
+      const response = await fetch('/api/payments/razorpay/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          courseId, 
+          amount: price,
+          couponCode: appliedCoupon ? appliedCoupon.code : null
+        }),
+      });
 
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: order.amount,
-          currency: order.currency,
-          name: "IRII Finishing School",
-          description: `Enrollment for ${courseTitle}`,
-          order_id: order.id,
-          handler: async function (response: any) {
+      const order = await response.json();
+
+      if (!response.ok || !order.id) {
+        setEnrollError(order.error || "Failed to initiate payment. Please try again.");
+        setIsEnrolling(false);
+        return;
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "IRII Finishing School",
+        description: `Enrollment for ${courseTitle}`,
+        order_id: order.id,
+        handler: async function (response: any) {
+          try {
             const verifyRes = await fetch('/api/payments/razorpay/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -120,31 +144,41 @@ function EnrollButton({
             if (verifyData.message === 'Success') {
               router.refresh();
               router.push(`/dashboard/courses/${courseId}`);
+            } else {
+              setEnrollError(verifyData.error || "Payment verification failed.");
+              setIsEnrolling(false);
             }
-          },
-          prefill: {
-            email: user.email,
-          },
-          theme: {
-            color: "#004D61",
-          },
-        };
+          } catch (err) {
+            console.error("Verification error:", err);
+            setEnrollError("Network error verifying payment.");
+            setIsEnrolling(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsEnrolling(false);
+          }
+        },
+        prefill: {
+          email: activeUser.email,
+        },
+        theme: {
+          color: "#004D61",
+        },
+      };
 
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      } catch (error) {
-        console.error("Error in handleEnroll:", error);
-      }
-    });
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        setEnrollError(response.error?.description || "Payment failed.");
+        setIsEnrolling(false);
+      });
+      rzp.open();
+    } catch (error) {
+      console.error("Error in handleEnroll:", error);
+      setEnrollError("An unexpected error occurred. Please try again.");
+      setIsEnrolling(false);
+    }
   };
-
-  if (loadingUser || isPending) {
-    return (
-      <div className="w-full h-12 rounded-lg bg-muted flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   if (isEnrolled) {
     return (
@@ -170,12 +204,12 @@ function EnrollButton({
             placeholder="PROMO CODE"
             value={couponInput}
             onChange={(e) => setCouponInput(e.target.value)}
-            disabled={validatingCoupon}
+            disabled={validatingCoupon || isEnrolling}
             className="flex-1 border rounded-lg px-3 py-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary uppercase"
           />
           <button
             onClick={handleApplyCoupon}
-            disabled={validatingCoupon || !couponInput.trim()}
+            disabled={validatingCoupon || isEnrolling || !couponInput.trim()}
             className="px-4 py-1.5 bg-primary text-primary-foreground font-semibold rounded-lg text-xs hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {validatingCoupon ? "Applying..." : "Apply"}
@@ -200,21 +234,31 @@ function EnrollButton({
       <button
         className={`w-full rounded-lg px-6 py-3 font-semibold transition-all duration-300 ease-in-out relative h-12
           ${
-            isPending
+            isEnrolling
               ? "bg-muted text-muted-foreground cursor-not-allowed hover:scale-100"
               : "bg-primary text-primary-foreground hover:bg-primary/95 hover:shadow-lg hover:shadow-primary/20"
           }
         `}
-        disabled={isPending}
+        disabled={isEnrolling}
         onClick={handleEnroll}
       >
-        <span>Enroll Now {appliedCoupon ? `(₹${appliedCoupon.finalAmount})` : `(₹${price})`}</span>
-        {isPending && (
-          <div className="absolute inset-0 flex items-center justify-center">
+        <span className={isEnrolling ? "invisible" : ""}>
+          Enroll Now {appliedCoupon ? `(₹${appliedCoupon.finalAmount})` : `(₹${price})`}
+        </span>
+        {isEnrolling && (
+          <div className="absolute inset-0 flex items-center justify-center gap-2">
             <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-semibold">Processing...</span>
           </div>
         )}
       </button>
+
+      {enrollError && (
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-destructive mt-2">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>{enrollError}</span>
+        </div>
+      )}
     </div>
   );
 }

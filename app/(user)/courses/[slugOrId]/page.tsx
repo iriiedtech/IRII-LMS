@@ -244,6 +244,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
                   isEnrolled={isEnrolled} 
                   price={Number(course.price)}
                   courseTitle={course.title}
+                  initialUser={user ? { id: user.id, email: user.email } : null}
                 />
                 
                 <div className="space-y-3 pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">
